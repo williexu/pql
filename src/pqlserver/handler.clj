@@ -34,4 +34,6 @@
   (wrap-defaults app-routes api-defaults))
 
 
-(query->sql test-schema ["from" "pets" ["=" "owner" "susan"]])
+(->> "people { age > 30}"
+     pql->ast
+     (query->sql test-schema))

@@ -8,7 +8,7 @@
                  [instaparse "1.4.9"]
                  [cheshire "5.8.1"]
                  [compojure "1.6.1"]
-                 [honeysql "0.6.3"]
+                 [honeysql "0.9.4"]
                  [prismatic/schema "1.1.9"]
                  [org.clojure/tools.logging "0.4.1"]
                  [ring/ring-defaults "0.3.2"]]

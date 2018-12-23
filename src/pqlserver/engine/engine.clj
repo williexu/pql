@@ -21,6 +21,9 @@
   [column
    subquery])
 
+(defrecord AndExpression [clauses])
+(defrecord OrExpression [clauses])
+
 (defprotocol SQLGen
   (-plan->hsql [query]))
 
@@ -31,7 +34,24 @@
 
   BinaryExpression
   (-plan->hsql [{:keys [column operator value] :as args}]
-    [operator (-> column :field name -plan->hsql keyword) (-plan->hsql value)])
+    [operator
+     (-> column :field name -plan->hsql keyword)
+     (-plan->hsql value)])
+
+
+  InExpression
+  (-plan->hsql [{:keys [column subquery]}]
+    [:in column
+     {:select "foo"
+      :from [(-plan->hsql subquery)]}])
+
+  AndExpression
+  (-plan->hsql [expr]
+    (concat [:and] (map -plan->hsql (:clauses expr))))
+
+  OrExpression
+  (-plan->hsql [expr]
+    (concat [:or] (map -plan->hsql (:clauses expr))))
 
   Object
   (-plan->hsql [obj]
@@ -57,9 +77,23 @@
   (cm/match [node]
             [[(op :guard #{"=" "~" "<" "<=" ">" ">="}) column value]]
             (let [info (get-in query-rec [:projections (keyword column)])]
-              (map->BinaryExpression {:operator op
+              (map->BinaryExpression {:operator (keyword op)
                                       :column info
-                                      :value value}))))
+                                      :value value}))
+
+
+            [["and" & exprs]]
+            (map->AndExpression
+              {:clauses (map #(user-node->plan-node query-rec %) exprs)})
+
+            [["or" & exprs]]
+            (map->OrExpression
+              {:clauses (map #(user-node->plan-node query-rec %) exprs)})
+
+            [["in" column subquery]]
+            (map->InExpression
+              {:column column
+               :subquery (user-node->plan-node query-rec subquery)})))
 
 
 (defn plan->honeysql

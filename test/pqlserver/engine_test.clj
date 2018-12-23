@@ -17,4 +17,14 @@
 (deftest test-engine
   (are [input expected] (= (query->sql test-schema input) expected)
        ["from" "people" ["=" "name" "susan"]]
-       ["SELECT people.name, people.age FROM people WHERE people.name = ?" "susan"]))
+       ["SELECT people.name, people.age FROM people WHERE people.name = ?" "susan"]
+
+       ["from" "people" ["and" ["=" "name" "susan"] [">" "age" 30]]]
+       ["SELECT people.name, people.age FROM people WHERE (people.name = ? AND people.age > ?)" "susan" 30]
+
+       ["from" "people" ["or" ["=" "name" "susan"] [">" "age" 30]]]
+       ["SELECT people.name, people.age FROM people WHERE (people.name = ? OR people.age > ?)" "susan" 30]
+
+       ["from" "people" ["or" ["=" "name" "susan"] ["and" [">" "age" 30] ["<" "age" 100]]]]
+       ["SELECT people.name, people.age FROM people WHERE (people.name = ? OR (people.age > ? AND people.age < ?))" "susan" 30 100]
+       ))
