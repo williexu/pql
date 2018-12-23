@@ -4,7 +4,7 @@
 
 
 (deftest test-pql->ast
-  (are [pql ast] (= (pql->ast pql) ast)
+  (are [pql ast] (= ast (pql->ast pql))
 
        ; basic binary expression
        "people { name = 'susan' }"
@@ -62,4 +62,10 @@
 
        "people [name, age] { name !~* 'susan'}"
        ["from" "people" ["extract" ["name" "age"] ["not" ["~*" "name" "susan"]]]]
+
+       "people [name, age] { name in pets[name] {owner = 'foobar'}}"
+			 ["from" "people" ["extract" ["name" "age"] ["in" "name" ["from" "pets" ["extract" ["name"] ["=" "owner" "foobar"]]]]]]
+
+       "people { name in pets[name] {owner = 'foobar'}}"
+			 ["from" "people" ["in" "name" ["from" "pets" ["extract" ["name"] ["=" "owner" "foobar"]]]]]
        ))

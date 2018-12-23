@@ -33,7 +33,7 @@
 (def app
   (wrap-defaults app-routes api-defaults))
 
-(->> "people [name] { age ~ 'foo'}"
+(->> "people [name] { age ~ 'foo' and name = 'foobar' and name in pets[name] { owner = 'foo'}}"
      pql->ast
      (query->sql test-schema)
      )

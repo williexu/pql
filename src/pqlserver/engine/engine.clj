@@ -9,21 +9,20 @@
             [schema.core :as s]))
 
 (defmethod hfmt/fn-handler "~" [_ field pattern]
-  (str (hfmt/to-sql field) " ~ "
-       (hfmt/to-sql pattern)))
+  (str (hfmt/to-sql field) " ~ " (hfmt/to-sql pattern)))
 
 (defmethod hfmt/fn-handler "~*" [_ field pattern]
-  (str (hfmt/to-sql field) " ~* "
-       (hfmt/to-sql pattern)))
+  (str (hfmt/to-sql field) " ~* " (hfmt/to-sql pattern)))
 
 (defrecord Query [projections selection])
-(defrecord BinaryExpression [operator column value])
-(defrecord FromExpression [projections subquery where])
-(defrecord ExtractExpression [columns subquery])
-(defrecord RegexExpression [column value])
 (defrecord AndExpression [clauses])
-(defrecord OrExpression [clauses])
+(defrecord BinaryExpression [operator column value])
+(defrecord ExtractExpression [columns subquery])
+(defrecord FromExpression [projections subquery where])
+(defrecord InExpression [column subquery])
 (defrecord NotExpression [clause])
+(defrecord OrExpression [clauses])
+(defrecord RegexExpression [column value])
 
 (defprotocol SQLGen
   (-plan->hsql [node]))
@@ -53,6 +52,11 @@
          (map -plan->hsql)
          (concat [:and])))
 
+  InExpression
+  (-plan->hsql [{:keys [column subquery]}]
+    [:in column
+     (-plan->hsql subquery)])
+
   OrExpression
   (-plan->hsql [expr]
     (->> (:clauses expr)
@@ -66,9 +70,7 @@
   Object
   (-plan->hsql [obj] obj))
 
-(defn plan->hsql
-  [plan]
-  (-plan->hsql plan))
+(defn plan->hsql [plan] (-plan->hsql plan))
 
 (defn user-node->plan-node
   [schema context node]
@@ -79,16 +81,13 @@
                                       :column (:field column-info)
                                       :value value}))
 
-
             [["from" (entity :guard string?) ["extract" columns & expr]]]
-            (let [query-rec (get schema (keyword entity))
-                  projections (->> columns
-                                   (map keyword)
-                                   (map #(get-in query-rec [:projections % :field])))
-                  base-query (:selection query-rec)]
+            (let [{:keys [selection] :as query-rec} (get schema (keyword entity))
+                  projections (->> (map keyword columns)
+                                   (map #(get-in query-rec [:projections % :field])))]
               (map->FromExpression
-                {:projections projections
-                 :subquery base-query
+                {:projections (vec projections)
+                 :subquery selection
                  :where (some->> (first expr)
                                  (user-node->plan-node schema (keyword entity)))}))
 
@@ -115,6 +114,15 @@
             [["or" & exprs]]
             (map->OrExpression
               {:clauses (map (partial user-node->plan-node schema context) exprs)})
+
+            [["in" column subquery]]
+            (let [column (-> schema
+                             (get-in [context :projections (keyword column)])
+                             :field)]
+              (map->InExpression
+                {:column column
+                 :subquery (user-node->plan-node
+                             schema context subquery)}))
 
             [["not" expr]]
             (map->NotExpression
