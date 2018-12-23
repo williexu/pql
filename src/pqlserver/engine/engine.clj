@@ -9,13 +9,11 @@
             [honeysql.format :as hfmt]
             [honeysql.core :as hcore]))
 
-
 ; HoneySQL extensions
 (defmethod hfmt/fn-handler "~" [_ field pattern]
   (str (hfmt/to-sql field) " ~ "
        (hfmt/to-sql pattern)))
 
-; HoneySQL extensions
 (defmethod hfmt/fn-handler "~*" [_ field pattern]
   (str (hfmt/to-sql field) " ~* "
        (hfmt/to-sql pattern)))
@@ -32,6 +30,15 @@
 
 (defrecord InExpression
   [column
+   subquery])
+
+(defrecord FromExpression
+  [projections
+   subquery
+   where])
+
+(defrecord ExtractExpression
+  [columns
    subquery])
 
 (defrecord RegexExpression
@@ -56,7 +63,7 @@
   BinaryExpression
   (-plan->hsql [{:keys [column operator value] :as args}]
     [operator
-     (-> column :field name -plan->hsql keyword)
+     (keyword column)
      (-plan->hsql value)])
 
 
@@ -65,6 +72,21 @@
     [:in column
      {:select "foo"
       :from [(-plan->hsql subquery)]}])
+
+
+  FromExpression
+  (-plan->hsql [{:keys [projections subquery where]}]
+    {:select projections
+     :from [(:from subquery)]
+     :where (-plan->hsql where)})
+
+
+  ExtractExpression
+  (-plan->hsql [{:keys [columns subquery]}]
+    (println "COLUMNS" {:select (mapv keyword columns)
+                        :from [(-plan->hsql subquery)]})
+    {:select (mapv keyword columns)
+     :from [(-plan->hsql subquery)]})
 
   AndExpression
   (-plan->hsql [expr]
@@ -97,48 +119,54 @@
               {:entity entity
                :remaining-query remaining-query})))
 
+
 (defn user-node->plan-node
-  [query-rec node]
+  [schema context node]
   (cm/match [node]
             [[(op :guard #{"=" "~" "~*" "<" "<=" ">" ">="}) column value]]
-            (let [info (get-in query-rec [:projections (keyword column)])]
+            (let [column-info (get-in schema [context :projections (keyword column)])]
               (map->BinaryExpression {:operator (keyword op)
-                                      :column info
+                                      :column (:field column-info)
                                       :value value}))
+
+            [["from" entity where]]
+            (if (string? entity)
+              (let [query-rec (get schema (keyword entity))
+                    base-query (:selection query-rec)
+                    projections (->> (vals (:projections query-rec))
+                                     (mapv :field))]
+                (map->FromExpression
+                  {:projections projections
+                   :subquery base-query
+                   :where (user-node->plan-node schema (keyword entity) where)}))
+              ;; subquery
+              )
+
+            [["extract" columns expr]]
+            (map->ExtractExpression
+              {:columns columns
+               :subquery expr})
 
             [["and" & exprs]]
             (map->AndExpression
-              {:clauses (map #(user-node->plan-node query-rec %) exprs)})
+              {:clauses (map (partial user-node->plan-node schema context) exprs)})
 
             [["or" & exprs]]
             (map->OrExpression
-              {:clauses (map #(user-node->plan-node query-rec %) exprs)})
+              {:clauses (map (partial user-node->plan-node schema context) exprs)})
 
             [["in" column subquery]]
             (map->InExpression
               {:column column
-               :subquery (user-node->plan-node query-rec subquery)})
+               :subquery (user-node->plan-node schema context subquery)})
 
             [["not" expr]]
-            (map->NotExpression {:clause (user-node->plan-node query-rec expr)})))
-
-
-(defn plan->honeysql
-  "Convert a plan to a honeysql datastructure"
-  [query-rec plan]
-  (let [base-query (:selection query-rec)
-        selection (->> (vals (:projections query-rec))
-                       (mapv :field))
-        sqlmap {:select selection
-                :from [(:from base-query)]
-                :where (plan->hsql plan)}]
-    sqlmap))
+            (map->NotExpression
+              {:clause (user-node->plan-node schema context expr)})))
 
 (defn query->sql
   [schema query]
-  (let [{:keys [entity remaining-query]} (parse-query-context query)
-        query-rec (get schema entity)]
-    (->> remaining-query
-         (user-node->plan-node query-rec)
-         (plan->honeysql query-rec)
-         hcore/format)))
+  (->> query
+       (user-node->plan-node schema nil)
+       plan->hsql
+       hcore/format))

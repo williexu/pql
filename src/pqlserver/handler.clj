@@ -32,3 +32,7 @@
 
 (def app
   (wrap-defaults app-routes api-defaults))
+
+(->> "people { age ~ 'foo'}"
+     pql->ast
+     (query->sql test-schema))

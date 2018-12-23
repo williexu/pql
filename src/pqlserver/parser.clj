@@ -130,9 +130,10 @@
   (str/join "." args))
 
 (def transform-specification
-  {:from               transform-from
-   :subquery           transform-subquery
+  {
    :extract            transform-extract
+   :from               transform-from
+   :subquery           transform-subquery
    :expr-or            transform-expr-or
    :expr-and           transform-expr-and
    :expr-not           transform-expr-not
