@@ -52,4 +52,12 @@
 
 			 ["from" "people" ["in" "name" ["from" "pets" ["extract" ["name"] ["=" "owner" "foobar"]]]]]
        ["SELECT people.name, people.age FROM people WHERE (people.name in (SELECT pets.name FROM pets WHERE pets.owner = ?))" "foobar"]
+
+
+       ["from" "people" ["null?" "name" true]]
+       ["SELECT people.name, people.age FROM people WHERE people.name IS NULL"]
+
+       ["from" "people" ["null?" "name" false]]
+       ["SELECT people.name, people.age FROM people WHERE people.name IS NOT NULL"]
+
        ))

@@ -23,6 +23,7 @@
 (defrecord NotExpression [clause])
 (defrecord OrExpression [clauses])
 (defrecord RegexExpression [column value])
+(defrecord NullExpression [column null?])
 
 (defprotocol SQLGen
   (-plan->hsql [node]))
@@ -56,6 +57,13 @@
   (-plan->hsql [{:keys [column subquery]}]
     [:in column
      (-plan->hsql subquery)])
+
+  NullExpression
+  (-plan->hsql [{:keys [column null?]}]
+    (let [lhs (-plan->hsql (:field column))]
+      (if null?
+        [:is lhs nil]
+        [:is-not lhs nil])))
 
   OrExpression
   (-plan->hsql [expr]
@@ -114,6 +122,10 @@
             [["or" & exprs]]
             (map->OrExpression
               {:clauses (map (partial user-node->plan-node schema context) exprs)})
+
+            [["null?" column value]]
+            (let [column (get-in schema [context :projections (keyword column)])]
+              (map->NullExpression {:column column :null? value}))
 
             [["in" column subquery]]
             (let [column (-> schema

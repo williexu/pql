@@ -68,4 +68,10 @@
 
        "people { name in pets[name] {owner = 'foobar'}}"
 			 ["from" "people" ["in" "name" ["from" "pets" ["extract" ["name"] ["=" "owner" "foobar"]]]]]
+
+       "people { name is null }"
+       ["from" "people" ["null?" "name" true]]
+
+       "people { name is not null }"
+       ["from" "people" ["null?" "name" false]]
        ))
