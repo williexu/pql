@@ -41,4 +41,7 @@
        ["from" "people" ["or" ["=" "name" "foo"]
                          ["and" ["=" "name" "bar"] ["=" "name" "baz"]]]]
 
+       "people { name != 'susan'}"
+       ["from" "people" ["not" ["=" "name" "susan"]]]
+
        ))

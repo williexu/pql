@@ -48,12 +48,14 @@ expr-not     = ( not, [<whitespace>], expr-not ) | expr-rest;
 subquery = entity, [<whitespace>], where;
 
 (* Conditional expression *)
-condexpression  = (condexpregexp | condexpregexparray | condexpinequality | condexpmatch | condexpin);
+condexpression  = (condexpregexp | condexpregexparray | condexpinequality | condexpmatch | condexpnotmatch | condexpnotregexp | condexpin);
 <condexpregexp> = field, [<whitespace>], condregexp, [<whitespace>], valueregexp;
 <condexpregexparray> = field, [<whitespace>], condregexparray, [<whitespace>], valueregexparray;
 <condexpinequality> = field, [<whitespace>], condinequality, [<whitespace>], valueordered;
 <condexpmatch>  = field, [<whitespace>], condmatch, [<whitespace>], literal;
 <condexpin>     = (field | groupedfieldlist), [<whitespace>], condin, [<whitespace>], valuein;
+<condexpnotmatch> = field, [<whitespace>], condnotmatch, [<whitespace>], literal;
+<condexpnotregexp> = field, [<whitespace>], condnotregexp, [<whitespace>], literal;
 
 (* Special is null/is not null expression *)
 condexpnull   = field, [<whitespace>], (condisnull | condisnotnull);
@@ -82,6 +84,8 @@ field = #'[a-zA-Z0-9_]+\??' | (dottedfield, fieldpath);
 <condregexparray> = '~>';
 <condinequality>  = '>=' | '<=' | '<' | '>';
 <condmatch>       = '=';
+<condnotmatch>    = '!=';
+<condnotregexp>   = '!~';
 <condin>          = 'in';
 
 <valueregexp>      = string;

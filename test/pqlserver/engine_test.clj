@@ -27,4 +27,7 @@
 
        ["from" "people" ["or" ["=" "name" "susan"] ["and" [">" "age" 30] ["<" "age" 100]]]]
        ["SELECT people.name, people.age FROM people WHERE (people.name = ? OR (people.age > ? AND people.age < ?))" "susan" 30 100]
+
+       ["from" "people" ["not" ["=" "name" "susan"]]]
+       ["SELECT people.name, people.age FROM people WHERE NOT people.name = ?" "susan"]
        ))

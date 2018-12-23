@@ -23,6 +23,7 @@
 
 (defrecord AndExpression [clauses])
 (defrecord OrExpression [clauses])
+(defrecord NotExpression [clause])
 
 (defprotocol SQLGen
   (-plan->hsql [query]))
@@ -52,6 +53,10 @@
   OrExpression
   (-plan->hsql [expr]
     (concat [:or] (map -plan->hsql (:clauses expr))))
+
+  NotExpression
+  (-plan->hsql [expr]
+    [:not (-plan->hsql (:clause expr))])
 
   Object
   (-plan->hsql [obj]
@@ -93,7 +98,12 @@
             [["in" column subquery]]
             (map->InExpression
               {:column column
-               :subquery (user-node->plan-node query-rec subquery)})))
+               :subquery (user-node->plan-node query-rec subquery)})
+
+
+
+            [["not" expr]]
+            (map->NotExpression {:clause (user-node->plan-node query-rec expr)})))
 
 
 (defn plan->honeysql
