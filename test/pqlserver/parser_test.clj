@@ -57,5 +57,9 @@
        "people { name !~* 'susan'}"
        ["from" "people" ["not" ["~*" "name" "susan"]]]
 
+       "people [name] { name !~* 'susan'}"
+       ["from" "people" ["extract" ["name"] ["not" ["~*" "name" "susan"]]]]
 
+       "people [name, age] { name !~* 'susan'}"
+       ["from" "people" ["extract" ["name" "age"] ["not" ["~*" "name" "susan"]]]]
        ))

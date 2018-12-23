@@ -40,4 +40,11 @@
 
        ["from" "people" ["not" ["~*" "name" "susan"]]]
        ["SELECT people.name, people.age FROM people WHERE NOT people.name ~* ?" "susan"]
+
+
+       ["from" "people" ["extract" ["name"] ["not" ["~*" "name" "susan"]]]]
+       ["SELECT people.name FROM people WHERE NOT people.name ~* ?" "susan"]
+
+       ["from" "people" ["extract" ["name" "age"] ["not" ["~*" "name" "susan"]]]]
+       ["SELECT people.name, people.age FROM people WHERE NOT people.name ~* ?" "susan"]
        ))
