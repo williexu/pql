@@ -14,12 +14,12 @@
                                  :field :people.name}
                           :age {:type :number
                                 :field :people.age}}
-            :selection {:from [:people]}}
+            :selection {:from :people}}
    :pets {:projections {:name {:type :string
-                               :field :people.name}
+                               :field :pets.name}
                         :owner {:type :string
                                 :field :pets.owner}}
-          :selection {:from [:pets]}}})
+          :selection {:from :pets}}})
 
 
 (defroutes app-routes
@@ -34,4 +34,4 @@
   (wrap-defaults app-routes api-defaults))
 
 
-;(query->sql test-schema ["from" "pets" ["=" "owner" "susan"]])
+(query->sql test-schema ["from" "pets" ["=" "owner" "susan"]])

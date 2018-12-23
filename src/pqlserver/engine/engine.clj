@@ -17,6 +17,10 @@
    column
    value])
 
+(defrecord InExpression
+  [column
+   subquery])
+
 (defprotocol SQLGen
   (-plan->hsql [query]))
 
@@ -27,15 +31,15 @@
 
   BinaryExpression
   (-plan->hsql [{:keys [column operator value] :as args}]
-    [operator (-plan->hsql column) (-plan->hsql value)]))
+    [operator (-> column :field name -plan->hsql keyword) (-plan->hsql value)])
+
+  Object
+  (-plan->hsql [obj]
+    obj))
 
 (defn plan->hsql
   [query]
-  (println "CONVER TQUERY" query)
   (-plan->hsql query))
-
-(defn honeysql-from-query
-  [query])
 
 (defn parse-query-context
   [query]
@@ -51,9 +55,9 @@
 (defn user-node->plan-node
   [query-rec node]
   (cm/match [node]
-            [["=" column value]]
+            [[(op :guard #{"=" "~" "<" "<=" ">" ">="}) column value]]
             (let [info (get-in query-rec [:projections (keyword column)])]
-              (map->BinaryExpression {:operator :=
+              (map->BinaryExpression {:operator op
                                       :column info
                                       :value value}))))
 
@@ -61,25 +65,19 @@
 (defn plan->honeysql
   "Convert a plan to a honeysql datastructure"
   [query-rec plan]
-  (println "QUERY REC" query-rec)
-  (println "PLAN IS" (-plan->hsql plan))
   (let [base-query (:selection query-rec)
         selection (->> (vals (:projections query-rec))
                        (mapv :field))
         sqlmap {:select selection
-                :from base-query
-                :where (-plan->hsql plan)}]
-
-    (println "SQLMAP" sqlmap)
+                :from [(:from base-query)]
+                :where (plan->hsql plan)}]
     sqlmap))
 
 (defn query->sql
   [schema query]
-  (println "THIS QUERY" query)
   (let [{:keys [entity remaining-query]} (parse-query-context query)
-        query-rec (get schema entity)
-        plan (user-node->plan-node query-rec remaining-query)
-        honeysql (plan->honeysql query-rec plan)
-        compiled-stmt (hcore/format honeysql)]
-    (println "COMPILED" compiled-stmt)
-    query))
+        query-rec (get schema entity)]
+    (->> remaining-query
+         (user-node->plan-node query-rec)
+         (plan->honeysql query-rec)
+         hcore/format)))
