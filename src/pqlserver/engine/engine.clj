@@ -15,6 +15,10 @@
   (str (hfmt/to-sql field) " ~ "
        (hfmt/to-sql pattern)))
 
+; HoneySQL extensions
+(defmethod hfmt/fn-handler "~*" [_ field pattern]
+  (str (hfmt/to-sql field) " ~* "
+       (hfmt/to-sql pattern)))
 
 ; Node types
 (defrecord Query
@@ -96,7 +100,7 @@
 (defn user-node->plan-node
   [query-rec node]
   (cm/match [node]
-            [[(op :guard #{"=" "~" "<" "<=" ">" ">="}) column value]]
+            [[(op :guard #{"=" "~" "~*" "<" "<=" ">" ">="}) column value]]
             (let [info (get-in query-rec [:projections (keyword column)])]
               (map->BinaryExpression {:operator (keyword op)
                                       :column info

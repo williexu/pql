@@ -52,6 +52,7 @@
   (case b
     "!=" ["not" ["=" a c]]
     "!~" ["not" ["~" a c]]
+    "!~*" ["not" ["~*" a c]]
     [b a c]))
 
 (defn transform-condexpnull

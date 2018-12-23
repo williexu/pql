@@ -51,4 +51,11 @@
        "people { name !~ 'susan'}"
        ["from" "people" ["not" ["~" "name" "susan"]]]
 
+       "people { name ~* 'susan'}"
+       ["from" "people" ["~*" "name" "susan"]]
+
+       "people { name !~* 'susan'}"
+       ["from" "people" ["not" ["~*" "name" "susan"]]]
+
+
        ))
