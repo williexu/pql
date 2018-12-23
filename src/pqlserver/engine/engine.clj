@@ -6,8 +6,17 @@
             [pqlserver.utils :as utils]
             [clojure.tools.logging :as log]
             [schema.core :as s]
+            [honeysql.format :as hfmt]
             [honeysql.core :as hcore]))
 
+
+; HoneySQL extensions
+(defmethod hfmt/fn-handler "~" [_ field pattern]
+  (str (hfmt/to-sql field) " ~ "
+       (hfmt/to-sql pattern)))
+
+
+; Node types
 (defrecord Query
   [projections
    selection])
@@ -21,10 +30,17 @@
   [column
    subquery])
 
+(defrecord RegexExpression
+  [column
+   value])
+
 (defrecord AndExpression [clauses])
+
 (defrecord OrExpression [clauses])
+
 (defrecord NotExpression [clause])
 
+; Engine
 (defprotocol SQLGen
   (-plan->hsql [query]))
 
@@ -86,7 +102,6 @@
                                       :column info
                                       :value value}))
 
-
             [["and" & exprs]]
             (map->AndExpression
               {:clauses (map #(user-node->plan-node query-rec %) exprs)})
@@ -99,8 +114,6 @@
             (map->InExpression
               {:column column
                :subquery (user-node->plan-node query-rec subquery)})
-
-
 
             [["not" expr]]
             (map->NotExpression {:clause (user-node->plan-node query-rec expr)})))
