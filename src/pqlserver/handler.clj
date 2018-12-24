@@ -3,7 +3,7 @@
             [clojure.tools.nrepl.server :refer [start-server]]
             [compojure.route :as route]
             [pqlserver.parser :refer [pql->ast]]
-            [pqlserver.engine.engine :refer [query->sql]]
+            [pqlserver.engine :refer [query->sql]]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]))
 
 (defonce nrepl-server (start-server :port 8002))
@@ -27,13 +27,9 @@
   (GET "/query" [query]
        (->> query
             pql->ast
-            (query->sql test-schema)))
+            (query->sql test-schema)
+            first))
   (route/not-found "Not Found"))
 
 (def app
   (wrap-defaults app-routes api-defaults))
-
-(->> "people [name] { age ~ 'foo' and name = 'foobar' and name is null and name in pets[name] { owner = 'foo'}}"
-     pql->ast
-     (query->sql test-schema)
-     )

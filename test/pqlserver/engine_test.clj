@@ -1,6 +1,6 @@
 (ns pqlserver.engine-test
   (:require [clojure.test :refer :all]
-            [pqlserver.engine.engine :refer :all]))
+            [pqlserver.engine :refer :all]))
 
 
 (def test-schema
