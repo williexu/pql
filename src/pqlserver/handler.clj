@@ -1,10 +1,15 @@
 (ns pqlserver.handler
   (:require [compojure.core :refer :all]
             [clojure.tools.nrepl.server :refer [start-server]]
+            [cheshire.core :as json]
             [compojure.route :as route]
+            [clojure.java.jdbc :as jdbc]
             [pqlserver.parser :refer [pql->ast]]
             [pqlserver.engine :refer [query->sql]]
-            [ring.middleware.defaults :refer [wrap-defaults api-defaults]]))
+            [ring.util.response :as rr]
+            [ring.util.io :refer [piped-input-stream]]
+            [ring.middleware.defaults :refer [wrap-defaults api-defaults]])
+  (:import [java.io BufferedWriter OutputStreamWriter]))
 
 (defonce nrepl-server (start-server :port 8002))
 
@@ -22,27 +27,38 @@
           :selection {:from :pets}}})
 
 
+(defn json-response
+  ([body]
+   (json-response body 200))
+  ([body code]
+  (-> body
+      rr/response
+      (rr/content-type "application/json; charset=utf-8")
+      (rr/status code))))
+
+
+(defn generate-stream
+  ([data] (generate-stream data {:pretty true}))
+  ([data options]
+   (piped-input-stream
+     (fn [out] (json/generate-stream data
+                                     (-> out
+                                         (OutputStreamWriter.)
+                                         (BufferedWriter.))
+                                     options)))))
+
+
 (defroutes app-routes
   (GET "/" [] "Hello World")
   (GET "/query" [query]
-       (println "QUERY" query)
-       (->> query
-            pql->ast
-            (query->sql test-schema)
-            first))
+       (let [db {:dbtype "postgresql" :dbname "foo"}]
+         (->> query
+              pql->ast
+              (query->sql test-schema)
+              (jdbc/query db)
+              generate-stream
+              json-response)))
   (route/not-found "Not Found"))
 
 (def app
   (wrap-defaults app-routes api-defaults))
-
-(->> "people { name is not null order by name limit 1 offset 10}"
-   pql->ast
-   (query->sql test-schema)
-    )
-
-
-(def paging-clause? #{:limit :offset :order_by})
-
-(let [args [[:= :name :foo]  [:limit 10]  [:offset :10]]]
-  (into {} (filter #(paging-clause? (first %)) args))
-  )
