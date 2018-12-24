@@ -2,24 +2,40 @@
   (:import com.fasterxml.jackson.core.JsonParseException)
   (:require [instaparse.core :as insta]
             [clojure.string :as str]
+            [clojure.core.match :as cm]
             [cheshire.core :as json]))
 
 (defn paging-clause?
   [v]
   (contains? #{"limit" "offset" "order_by"} (first v)))
 
-(defn slurp-expr->extract
-  [clauses]
-  (let [paging-groups (group-by paging-clause? clauses)
-        paging-clauses (get paging-groups true)
-        other-clauses (get paging-groups false)]
-    (if (and (= (ffirst other-clauses) "extract") (second other-clauses))
-      (cons (vec (concat (first other-clauses) (rest other-clauses))) (vec paging-clauses))
-      clauses)))
+(defn update-cond
+  [m pred ks f & args]
+  (if pred
+    (apply update-in m ks f args)
+    m))
+
+(defn update-when
+  [m ks f & args]
+  (let [val (get-in m ks ::not-found)]
+    (apply update-cond m (not= val ::not-found) ks f args)))
+
+
+(-> {"order_by" [["name" "asc"]], "limit" 10, "offset" 10}
+    (update-when ["order_by"] #(mapv (fn [t] (mapv keyword t)) %)))
 
 (defn transform-from
   [entity & args]
-  (vec (concat ["from" entity] (slurp-expr->extract args))))
+  (let [paging-groups (group-by paging-clause? args)
+        paging-opts (-> (into {} (get paging-groups true))
+                        (update-when ["order_by"] #(mapv (fn [t] (mapv keyword t)) %)))
+        other-clauses (get paging-groups false)]
+    (cm/match (first other-clauses)
+              ["extract" & args]
+              ["from" entity (vec (concat (first other-clauses) (rest other-clauses))) paging-opts]
+
+              :else
+              ["from" entity (vec (concat (first other-clauses) (rest other-clauses))) paging-opts])))
 
 (defn transform-subquery
   ([entity]
@@ -122,7 +138,7 @@
   ["order_by"
    (vec (for [arg args]
           (if (= 2 (count arg))
-            (second arg)
+            [(second arg)]
             (vec (rest arg)))))])
 
 (defn transform-field
@@ -167,13 +183,18 @@
   (insta/parser
     (clojure.java.io/resource "pql-grammar.ebnf")))
 
+(defn mapkeys
+  [f m]
+  (into {} (concat (for [[k v] m] [(f k) v]))))
 
 (defn keywordize
   [ast]
-  (into [] (for [k ast] (cond
-                          (vector? k) (keywordize k)
-                          (string? k) (keyword k)
-                          :else k))))
+  (cond
+    (vector? ast) (mapv keywordize ast)
+    (string? ast) (-> ast (str/replace \_ \-) keyword)
+    (map? ast) (->> ast
+                    (mapkeys keywordize))
+    :else ast))
 
 (defn pql->ast
   [pql]

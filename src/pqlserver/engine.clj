@@ -29,7 +29,7 @@
 (defrecord AndExpression [clauses])
 (defrecord BinaryExpression [operator column value])
 (defrecord ExtractExpression [columns subquery])
-(defrecord FromExpression [projections subquery where])
+(defrecord FromExpression [projections subquery where limit offset order-by])
 (defrecord InExpression [column subquery])
 (defrecord NotExpression [clause])
 (defrecord OrExpression [clauses])
@@ -46,23 +46,18 @@
                                       :column field
                                       :value value}))
 
-            [[:from (entity :guard keyword?) [:extract columns & expr]]]
+            [[:from (entity :guard keyword?) [:extract columns & expr] & paging-term]]
             (let [{:keys [selection] :as query-rec} (get schema entity)
-                  projections (mapv #(-> query-rec :projections % :field) columns)]
+                  projections (mapv #(-> query-rec :projections % :field) columns)
+                  {:keys [limit offset order-by]} (first paging-term)]
               (map->FromExpression
                 {:projections projections
                  :subquery selection
                  :where (some->> (first expr)
-                                 (node->plan schema entity))}))
-
-            [[:from (entity :guard keyword?) [:extract columns & expr] & paging-args]]
-            (let [{:keys [selection] :as query-rec} (get schema entity)
-                  projections (mapv #(-> query-rec :projections % :field) columns)]
-              (map->FromExpression
-                {:projections projections
-                 :subquery selection
-                 :where (some->> (first expr)
-                                 (node->plan schema entity))}))
+                                 (node->plan schema entity))
+                 :limit limit
+                 :order-by order-by
+                 :offset offset}))
 
             [[:from (entity :guard keyword?) expr]]
             (let [{:keys [selection projections]} (get schema entity)]
@@ -71,12 +66,16 @@
                  :subquery selection
                  :where (node->plan schema entity expr)}))
 
-            [[:from (entity :guard keyword?) expr & paging-args]]
-            (let [{:keys [selection projections]} (get schema entity)]
+            [[:from (entity :guard keyword?) expr & paging-term]]
+            (let [{:keys [selection projections]} (get schema entity)
+                  {:keys [limit offset order-by]} (first paging-term)]
               (map->FromExpression
                 {:projections (mapv :field (vals projections))
                  :subquery selection
-                 :where (node->plan schema entity expr)}))
+                 :where (node->plan schema entity expr)
+                 :limit limit
+                 :order-by order-by
+                 :offset offset}))
 
             [[:extract columns expr]]
             (map->ExtractExpression
@@ -113,10 +112,13 @@
     [operator column (maybe-stringify value)])
 
   FromExpression
-  (-plan->hsql [{:keys [projections subquery where]}]
-    {:select projections
-     :from [(:from subquery)]
-     :where (-plan->hsql where)})
+  (-plan->hsql [{:keys [projections subquery where limit offset order-by]}]
+    (-> {:select projections
+         :from [(:from subquery)]
+         :where (-plan->hsql where)}
+        (cond-> limit (assoc :limit limit))
+        (cond-> offset (assoc :offset offset))
+        (cond-> order-by (assoc :order-by order-by))))
 
   ExtractExpression
   (-plan->hsql [{:keys [columns subquery]}]

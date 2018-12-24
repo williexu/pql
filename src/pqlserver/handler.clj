@@ -25,6 +25,7 @@
 (defroutes app-routes
   (GET "/" [] "Hello World")
   (GET "/query" [query]
+       (println "QUERY" query)
        (->> query
             pql->ast
             (query->sql test-schema)
@@ -33,3 +34,15 @@
 
 (def app
   (wrap-defaults app-routes api-defaults))
+
+(->> "people { name is not null order by name limit 1 offset 10}"
+   pql->ast
+   (query->sql test-schema)
+    )
+
+
+(def paging-clause? #{:limit :offset :order_by})
+
+(let [args [[:= :name :foo]  [:limit 10]  [:offset :10]]]
+  (into {} (filter #(paging-clause? (first %)) args))
+  )
