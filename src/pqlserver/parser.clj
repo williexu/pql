@@ -167,6 +167,17 @@
   (insta/parser
     (clojure.java.io/resource "pql-grammar.ebnf")))
 
+
+(defn keywordize
+  [ast]
+  (into [] (for [k ast] (cond
+                          (vector? k) (keywordize k)
+                          (string? k) (keyword k)
+                          :else k))))
+
 (defn pql->ast
   [pql]
-  (first (transform (parse pql))))
+  (-> (parse pql)
+      transform
+      first
+      keywordize))

@@ -25,6 +25,12 @@
 (defrecord RegexExpression [column value])
 (defrecord NullExpression [column null?])
 
+(def binary-op?
+  #{:= (keyword "~") (keyword "~*") :< :<= :> :>=})
+
+(defn stringify-key [k]
+  (if (keyword? k) (name k) k))
+
 (defprotocol SQLGen
   (-plan->hsql [node]))
 
@@ -34,7 +40,7 @@
 
   BinaryExpression
   (-plan->hsql [{:keys [column operator value]}]
-    [operator (keyword column) (-plan->hsql value)])
+    [operator column (stringify-key value)])
 
   FromExpression
   (-plan->hsql [{:keys [projections subquery where]}]
@@ -44,7 +50,7 @@
 
   ExtractExpression
   (-plan->hsql [{:keys [columns subquery]}]
-    {:select (mapv keyword columns)
+    {:select columns
      :from [(-plan->hsql subquery)]})
 
   AndExpression
@@ -83,60 +89,59 @@
 (defn user-node->plan-node
   [schema context node]
   (cm/match [node]
-            [[(op :guard #{"=" "~" "~*" "<" "<=" ">" ">="}) column value]]
-            (let [column-info (get-in schema [context :projections (keyword column)])]
-              (map->BinaryExpression {:operator (keyword op)
+            [[(op :guard binary-op?) column value]]
+            (let [column-info (get-in schema [context :projections column])]
+              (map->BinaryExpression {:operator op
                                       :column (:field column-info)
                                       :value value}))
 
-            [["from" (entity :guard string?) ["extract" columns & expr]]]
-            (let [{:keys [selection] :as query-rec} (get schema (keyword entity))
-                  projections (->> (map keyword columns)
+            [[:from (entity :guard keyword?) [:extract columns & expr]]]
+            (let [{:keys [selection] :as query-rec} (get schema entity)
+                  projections (->> columns
                                    (map #(get-in query-rec [:projections % :field])))]
               (map->FromExpression
                 {:projections (vec projections)
                  :subquery selection
                  :where (some->> (first expr)
-                                 (user-node->plan-node schema (keyword entity)))}))
+                                 (user-node->plan-node schema entity))}))
 
-            [["from" (entity :guard string?) expr]]
-            (let [query-rec (get schema (keyword entity))
+            [[:from (entity :guard keyword?) expr]]
+            (let [query-rec (get schema entity)
                   base-query (:selection query-rec)
                   projections (->> (vals (:projections query-rec))
                                    (mapv :field))]
               (map->FromExpression
                 {:projections projections
                  :subquery base-query
-                 :where (user-node->plan-node
-                          schema (keyword entity) expr)}))
+                 :where (user-node->plan-node schema entity expr)}))
 
-            [["extract" columns expr]]
+            [[:extract columns expr]]
             (map->ExtractExpression
               {:columns columns
                :subquery (user-node->plan-node schema context expr)})
 
-            [["and" & exprs]]
+            [[:and & exprs]]
             (map->AndExpression
               {:clauses (map (partial user-node->plan-node schema context) exprs)})
 
-            [["or" & exprs]]
+            [[:or & exprs]]
             (map->OrExpression
               {:clauses (map (partial user-node->plan-node schema context) exprs)})
 
-            [["null?" column value]]
-            (let [column (get-in schema [context :projections (keyword column)])]
+            [[:null? column value]]
+            (let [column (get-in schema [context :projections column])]
               (map->NullExpression {:column column :null? value}))
 
-            [["in" column subquery]]
+            [[:in column subquery]]
             (let [column (-> schema
-                             (get-in [context :projections (keyword column)])
+                             (get-in [context :projections column])
                              :field)]
               (map->InExpression
                 {:column column
                  :subquery (user-node->plan-node
                              schema context subquery)}))
 
-            [["not" expr]]
+            [[:not expr]]
             (map->NotExpression
               {:clause (user-node->plan-node schema context expr)})))
 
