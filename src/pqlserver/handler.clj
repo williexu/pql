@@ -13,7 +13,6 @@
 
 (defonce nrepl-server (start-server :port 8002))
 
-
 (def test-schema
   {:people {:projections {:name {:type :string
                                  :field :people.name}
@@ -26,7 +25,6 @@
                                 :field :pets.owner}}
           :selection {:from :pets}}})
 
-
 (defn json-response
   ([body]
    (json-response body 200))
@@ -35,7 +33,6 @@
       rr/response
       (rr/content-type "application/json; charset=utf-8")
       (rr/status code))))
-
 
 (defn generate-stream
   ([data] (generate-stream data {:pretty true}))
@@ -47,18 +44,23 @@
                                          (BufferedWriter.))
                                      options)))))
 
-
-(defroutes app-routes
-  (GET "/" [] "Hello World")
-  (GET "/query" [query]
-       (let [db {:dbtype "postgresql" :dbname "foo"}]
-         (->> query
-              pql->ast
-              (query->sql test-schema)
-              (jdbc/query db)
-              generate-stream
-              json-response)))
-  (route/not-found "Not Found"))
+(def app-routes
+  (let [db {:dbtype "postgresql" :dbname "foo"}
+        schema test-schema]
+    (routes
+      (GET "/" [] "Hello World")
+      (GET "/query" [query]
+           (->> query
+                pql->ast
+                (query->sql schema)
+                (jdbc/query db)
+                generate-stream
+                json-response))
+      (GET "/schema" []
+           (-> schema
+               generate-stream
+               json-response))
+      (route/not-found "Not Found"))))
 
 (def app
   (wrap-defaults app-routes api-defaults))
