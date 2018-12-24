@@ -59,4 +59,10 @@
        [:from :people [:null? :name false]]
        ["SELECT people.name, people.age FROM people WHERE people.name IS NOT NULL"]
 
+       [:from :people [:null? :name false] [:limit 1]]
+       ["SELECT people.name, people.age FROM people WHERE people.name IS NOT NULL LIMIT 1"]
+
+       [:from :people [:null? :name false] [:limit 1] [:offset 10]]
+       ["SELECT people.name, people.age FROM people WHERE people.name IS NOT NULL LIMIT 1 OFFSET 10"]
+
        ))

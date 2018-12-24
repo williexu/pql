@@ -72,4 +72,14 @@
        [:from :people [:null? :name true]]
 
        "people { name is not null }"
-       [:from :people [:null? :name false]]))
+       [:from :people [:null? :name false]]
+
+
+       "people { name is not null limit 1}"
+       [:from :people [:null? :name false] [:limit 1]]
+
+       "people { name is not null limit 1 offset 10}"
+       [:from :people [:null? :name false] [:limit 1] [:offset 10]]
+
+
+       ))

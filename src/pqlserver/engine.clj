@@ -55,7 +55,23 @@
                  :where (some->> (first expr)
                                  (node->plan schema entity))}))
 
+            [[:from (entity :guard keyword?) [:extract columns & expr] & paging-args]]
+            (let [{:keys [selection] :as query-rec} (get schema entity)
+                  projections (mapv #(-> query-rec :projections % :field) columns)]
+              (map->FromExpression
+                {:projections projections
+                 :subquery selection
+                 :where (some->> (first expr)
+                                 (node->plan schema entity))}))
+
             [[:from (entity :guard keyword?) expr]]
+            (let [{:keys [selection projections]} (get schema entity)]
+              (map->FromExpression
+                {:projections (mapv :field (vals projections))
+                 :subquery selection
+                 :where (node->plan schema entity expr)}))
+
+            [[:from (entity :guard keyword?) expr & paging-args]]
             (let [{:keys [selection projections]} (get schema entity)]
               (map->FromExpression
                 {:projections (mapv :field (vals projections))
