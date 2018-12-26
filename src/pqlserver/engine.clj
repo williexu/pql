@@ -15,11 +15,6 @@
 (def binary-op?
   #{:= :< :<= :> :>= (keyword "~") (keyword "~*")})
 
-(defn maybe-stringify
-  "Stringify a value if it is a keyword."
-  [v]
-  (if (keyword? v) (name v) v))
-
 (defprotocol SQLGen
   "Translates a plan to HoneySQL"
   (-plan->hsql [node]))
@@ -109,7 +104,7 @@
 
   BinaryExpression
   (-plan->hsql [{:keys [column operator value]}]
-    [operator column (maybe-stringify value)])
+    [operator column (cond-> value (keyword? value) name)])
 
   FromExpression
   (-plan->hsql [{:keys [projections subquery where limit offset order-by]}]

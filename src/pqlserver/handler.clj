@@ -19,13 +19,32 @@
 
 (defn query->chan
   "Load a resultset into an async channel, blocking on puts. This is assumed
-   to be called outside the main thread."
-  [db query chan]
-  (reduce (fn [_ record]
-            (async/>!! chan record))
-          0
-          (jdbc/reducible-query db query))
-  (async/close! chan))
+   to be called outside the main thread.
+
+   Streaming is accomplished by performing a reduce over a jdbc reducible-query
+   stream. The reduce is executed purely for side-effects, so its initial value
+   is irrelevant. Query cancellation is managed with the kill? channel. Putting
+   a value to kill? will abort the query and exit the future cleanly.
+
+   I'm not sure about the performance overhead of doing this on channels, but
+   it seems quick enough to me at the moment."
+  [db query result-chan kill?]
+  (try
+    (reduce (fn [_ record]
+              (async/alt!!
+                [kill?]
+                ([v _]
+                 (log/infof "Result stream received signal %s; closing" v)
+                 (throw (Exception.)))
+                [[result-chan record]]
+                ([_ _])))
+            ::init
+            (jdbc/reducible-query db query))
+    ;; Eat the exception; it was just for control flow.
+    (catch Exception e)
+    (finally
+      (async/close! kill?)
+      (async/close! result-chan))))
 
 (defn chan-seq!!
   "Create a lazy sequence of channel takes"
@@ -36,16 +55,20 @@
 (defmacro streamed-response
   "Execute body, writing results to a piped-input-stream, which may be passed
    to a ring response."
-  [writer-var & body]
+  [writer-var cancel-fn & body]
   `(piped-input-stream
      (fn [ostream#]
        (with-open [~writer-var (io/writer ostream# :encoding "UTF-8")]
          (try
            (do ~@body)
            (catch IOException e#
-             (log/debug e# "Error streaming response"))
+             ;; IOExceptions are things like broken pipes and will mostly come
+             ;; from query interrupts. No need to spam logs.
+             (log/debug e# "Error streaming response")
+             (~cancel-fn))
            (catch Exception e#
-             (log/error e# "Error streaming response")))))))
+             (log/error e# "Error streaming response")
+             (~cancel-fn)))))))
 
 (defn json-response
   "Produce a json ring response"
@@ -67,15 +90,18 @@
                           pql->ast
                           (query->sql schema))
                  result-chan (async/chan)
+                 kill? (async/chan)
+                 cancel-fn #(async/>!! kill? ::cancel)
                  ;; Execute the query in a future, writing records to
                  ;; result-chan. In the main thread, lazily pull records off
                  ;; the channel, format them to json, and write to a
                  ;; piped-input-stream (via streamed-response). Although we do
                  ;; not track the state of the future, we know that it has
                  ;; finished its work when result-seq is fully consumed.
-                 _ (future (query->chan db sql result-chan))
+                 _ (future (query->chan db sql result-chan kill?))
                  result-seq (chan-seq!! result-chan)]
              (streamed-response buf
+                                cancel-fn
                                 (-> result-seq
                                     (json/generate-stream buf {:pretty true})
                                     json-response))))
