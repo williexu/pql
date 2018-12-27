@@ -23,7 +23,6 @@
 (defrecord Query [projections selection])
 (defrecord AndExpression [clauses])
 (defrecord BinaryExpression [operator column value])
-(defrecord ExtractExpression [columns subquery])
 (defrecord FromExpression [projections subquery where limit offset order-by])
 (defrecord InExpression [column subquery])
 (defrecord NotExpression [clause])
@@ -72,11 +71,6 @@
                  :order-by order-by
                  :offset offset}))
 
-            [[:extract columns expr]]
-            (map->ExtractExpression
-              {:columns columns
-               :subquery (node->plan schema context expr)})
-
             [[:and & exprs]]
             (map->AndExpression
               {:clauses (map (partial node->plan schema context) exprs)})
@@ -114,11 +108,6 @@
         (cond-> limit (assoc :limit limit))
         (cond-> offset (assoc :offset offset))
         (cond-> order-by (assoc :order-by order-by))))
-
-  ExtractExpression
-  (-plan->hsql [{:keys [columns subquery]}]
-    {:select columns
-     :from [(-plan->hsql subquery)]})
 
   AndExpression
   (-plan->hsql [{:keys [clauses]}]

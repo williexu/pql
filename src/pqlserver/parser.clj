@@ -20,10 +20,6 @@
   (let [val (get-in m ks ::not-found)]
     (apply update-cond m (not= val ::not-found) ks f args)))
 
-
-(-> {"order_by" [["name" "asc"]], "limit" 10, "offset" 10}
-    (update-when ["order_by"] #(mapv (fn [t] (mapv keyword t)) %)))
-
 (defn transform-from
   [entity & args]
   (let [paging-groups (group-by paging-clause? args)
