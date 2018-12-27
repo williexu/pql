@@ -53,20 +53,14 @@
                  :order-by order-by
                  :offset offset}))
 
-            [[:from (entity :guard keyword?) expr]]
-            (let [{:keys [selection projections]} (get schema entity)]
-              (map->FromExpression
-                {:projections (mapv :field (vals projections))
-                 :subquery selection
-                 :where (node->plan schema entity expr)}))
-
             [[:from (entity :guard keyword?) expr & paging-term]]
             (let [{:keys [selection projections]} (get schema entity)
                   {:keys [limit offset order-by]} (first paging-term)]
               (map->FromExpression
                 {:projections (mapv :field (vals projections))
                  :subquery selection
-                 :where (node->plan schema entity expr)
+                 :where (when (not-empty expr)
+                          (node->plan schema entity expr))
                  :limit limit
                  :order-by order-by
                  :offset offset}))
@@ -103,8 +97,8 @@
   FromExpression
   (-plan->hsql [{:keys [projections subquery where limit offset order-by]}]
     (-> {:select projections
-         :from [(:from subquery)]
-         :where (-plan->hsql where)}
+         :from [(:from subquery)]}
+        (cond-> where (assoc :where (-plan->hsql where)))
         (cond-> limit (assoc :limit limit))
         (cond-> offset (assoc :offset offset))
         (cond-> order-by (assoc :order-by order-by))))

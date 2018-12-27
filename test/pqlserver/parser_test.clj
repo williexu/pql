@@ -6,6 +6,9 @@
 (deftest test-pql->ast
   (are [pql ast] (= ast (pql->ast pql))
 
+       "people {}"
+       [:from :people [] {}]
+
        ; basic binary expression
        "people { name = 'susan' }"
        [:from :people [:= :name :susan] {}]
@@ -101,4 +104,6 @@
        "people { name is not null order by name, age desc limit 1 offset 10}"
        [:from :people [:null? :name false] {:limit 1 :offset 10 :order-by [[:name] [:age :desc]]}]
 
+       "people {limit 10}"
+       [:from :people [] {:limit 10}]
        ))

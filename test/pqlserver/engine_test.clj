@@ -17,6 +17,9 @@
 
 (deftest test-engine
   (are [input expected] (= expected (query->sql test-schema input))
+       [:from :people [] {}]
+       ["SELECT people.name, people.age FROM people"]
+
        [:from :people [:= :name :susan] {}]
        ["SELECT people.name, people.age FROM people WHERE people.name = ?" "susan"]
 
@@ -91,4 +94,6 @@
        [:from :people [:null? :name false] {:limit 1 :offset 10 :order-by [[:name] [:age :desc]]}]
        ["SELECT people.name, people.age FROM people WHERE people.name IS NOT NULL ORDER BY name, age DESC LIMIT ? OFFSET ?"
         1 10]
-       ))
+
+       [:from :people [] {:limit 10}]
+       ["SELECT people.name, people.age FROM people LIMIT ?" 10]))
