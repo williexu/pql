@@ -15,13 +15,12 @@
       (is (= (:status response) 404)))))
 
 (deftest test-query->chan
-  (let [db {:dbtype "postgresql" :dbname "foo"}
-        future-live-ms 100]
+  (let [future-live-ms 100]
     (testing "Future closed when all results consumed"
       (let [result-chan (async/chan)
             kill? (async/chan)
             sql "select * from people limit 10"
-            result-fut (future (query->chan db sql result-chan kill?))
+            result-fut (future (query->chan sql result-chan kill?))
             result-seq (chan-seq!! result-chan)
             results (take 10 result-seq)]
         (is (= 10 (count results)))
@@ -33,7 +32,7 @@
       (let [result-chan (async/chan)
             sql "select * from people limit 10"
             kill? (async/chan)
-            result-fut (future (query->chan db sql result-chan kill?))
+            result-fut (future (query->chan sql result-chan kill?))
             result-seq (chan-seq!! result-chan)]
 
         ;; kill the stream before results are requested
@@ -44,7 +43,7 @@
       (let [result-chan (async/chan)
             sql "select * from people limit 10"
             kill? (async/chan)
-            result-fut (future (query->chan db sql result-chan kill?))
+            result-fut (future (query->chan sql result-chan kill?))
             result-seq (chan-seq!! result-chan)
             results (take 5 result-seq)]
         (is (= 5 (count results)))

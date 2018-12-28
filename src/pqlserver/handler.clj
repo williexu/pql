@@ -10,6 +10,7 @@
             [clojure.core.async :as async]
             [pqlserver.parser :refer [pql->ast]]
             [pqlserver.engine :refer [query->sql]]
+            [pqlserver.pooler :refer [datasource]]
             [pqlserver.json :as pql-json]
             [ring.util.response :as rr]
             [ring.util.io :refer [piped-input-stream]]
@@ -29,23 +30,24 @@
 
    I'm not sure about the performance overhead of doing this on channels, but
    it seems quick enough to me at the moment."
-  [db query result-chan kill?]
-  (try
-    (reduce (fn [_ record]
-              (async/alt!!
-                [kill?]
-                ([v _]
-                 (log/infof "Result stream received signal %s; closing" v)
-                 (throw (Exception.)))
-                [[result-chan record]]
-                ([_ _])))
-            ::init
-            (jdbc/reducible-query db query))
-    ;; Eat the exception; it was just for control flow.
-    (catch Exception e)
-    (finally
-      (async/close! kill?)
-      (async/close! result-chan))))
+  [query result-chan kill?]
+  (jdbc/with-db-connection [conn {:datasource @datasource}]
+    (try
+      (reduce (fn [_ record]
+                (async/alt!!
+                  [kill?]
+                  ([v _]
+                   (log/infof "Result stream received signal %s; closing" v)
+                   (throw (Exception.)))
+                  [[result-chan record]]
+                  ([_ _])))
+              ::init
+              (jdbc/reducible-query conn query {:fetch-size 100}))
+      ;; Eat the exception; it was just for control flow.
+      (catch Exception e)
+      (finally
+        (async/close! kill?)
+        (async/close! result-chan)))))
 
 (defn chan-seq!!
   "Create a lazy sequence of channel takes"
@@ -62,11 +64,6 @@
        (with-open [~writer-var (io/writer ostream# :encoding "UTF-8")]
          (try
            (do ~@body)
-           (catch IOException e#
-             ;; IOExceptions are things like broken pipes and will mostly come
-             ;; from query interrupts. No need to spam logs.
-             (log/info e# "Error streaming response")
-             (~cancel-fn))
            (catch Exception e#
              (log/error e# "Error streaming response")
              (~cancel-fn)))))))
@@ -99,7 +96,7 @@
                  ;; piped-input-stream (via streamed-response). Although we do
                  ;; not track the state of the future, we know that it has
                  ;; finished its work when result-seq is fully consumed.
-                 _ (future (query->chan db sql result-chan kill?))
+                 _ (future (query->chan sql result-chan kill?))
                  result-seq (chan-seq!! result-chan)]
              (streamed-response buf
                                 cancel-fn

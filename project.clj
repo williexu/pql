@@ -9,6 +9,7 @@
                  [cheshire "5.8.1"]
                  [compojure "1.6.1"]
                  [honeysql "0.9.4"]
+                 [hikari-cp "2.6.0"]
                  [org.clojure/java.jdbc "0.7.8"]
                  [org.clojure/core.async "0.4.490"]
                  [org.postgresql/postgresql "42.2.2"]
