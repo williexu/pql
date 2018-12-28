@@ -31,22 +31,39 @@
 (defrecord NullExpression [column null?])
 (defrecord LimitExpression [subquery limit])
 (defrecord OffsetExpression [subquery limit])
-(defrecord OrderByExpression [subquery columns])
+(defrecord OrderByExpression [subquery orderings])
+(defrecord OrderExpression [field direction])
+(defrecord FieldExpression [projection])
+(defrecord FunctionExpression [function args])
 
 (defn node->plan
   "Translates AST to a plan"
   [schema context node]
   (cm/match [node]
             [[(op :guard binary-op?) column value]]
-            (let [field (-> schema context :projections column :field)]
-              (map->BinaryExpression {:operator op
-                                      :column field
-                                      :value value}))
+            (map->BinaryExpression {:operator op
+                                    :column (node->plan schema context column)
+                                    :value value})
 
-            [[:order-by subquery columns]]
+            [[:orderparam field direction]]
+            (map->OrderExpression
+              {:field field
+               :direction direction})
+
+            [[:field field]]
+            (let [qualified-field (-> schema context :projections field :field)]
+              (map->FieldExpression
+                {:projection qualified-field}))
+
+            [[:function function & args]]
+            (map->FunctionExpression
+              {:function function
+               :args args})
+
+            [[:order-by subquery orderings]]
             (map->OrderByExpression
               {:subquery (node->plan schema context subquery)
-               :columns columns})
+               :orderings (mapv (partial node->plan schema context) orderings)})
 
             [[:limit subquery limit]]
             (map->LimitExpression
@@ -59,10 +76,9 @@
                :offset offset})
 
             [[:from (entity :guard keyword?) [:extract columns & expr]]]
-            (let [{:keys [selection] :as query-rec} (get schema entity)
-                  projections (mapv #(-> query-rec :projections % :field) columns)]
+            (let [{:keys [selection] :as query-rec} (get schema entity)]
               (map->FromExpression
-                {:projections projections
+                {:projections (mapv (partial node->plan schema entity) columns)
                  :subquery selection
                  :where (some->> (first expr)
                                  (node->plan schema entity))}))
@@ -84,12 +100,12 @@
               {:clauses (map (partial node->plan schema context) exprs)})
 
             [[:null? column value]]
-            (let [column (-> schema context :projections column)]
+            (let [column (node->plan schema context column)]
               (map->NullExpression {:column column :null? value}))
 
             [[:in column subquery]]
             (map->InExpression
-              {:column (-> schema context :projections column :field)
+              {:column (node->plan schema context column)
                :subquery (node->plan schema context subquery)})
 
             [[:not expr]]
@@ -111,17 +127,17 @@
         (assoc :offset offset)))
 
   OrderByExpression
-  (-plan->hsql [{:keys [subquery columns]}]
+  (-plan->hsql [{:keys [subquery orderings]}]
     (-> (-plan->hsql subquery)
-        (assoc :order-by columns)))
+        (assoc :order-by (map -plan->hsql orderings))))
 
   BinaryExpression
   (-plan->hsql [{:keys [column operator value]}]
-    [operator column (cond-> value (keyword? value) name)])
+    [operator (-plan->hsql column) (cond-> value (keyword? value) name)])
 
   FromExpression
   (-plan->hsql [{:keys [projections subquery where]}]
-    (-> {:select projections
+    (-> {:select (mapv -plan->hsql projections)
          :from [(:from subquery)]}
         (cond-> where (assoc :where (-plan->hsql where)))))
 
@@ -132,12 +148,20 @@
 
   InExpression
   (-plan->hsql [{:keys [column subquery]}]
-    [:in column
+    [:in (-plan->hsql column)
      (-plan->hsql subquery)])
+
+  FieldExpression
+  (-plan->hsql [{:keys [projection]}]
+    projection)
+
+  FunctionExpression
+  (-plan->hsql [{:keys [function args]}]
+    [(apply hcore/call function args)])
 
   NullExpression
   (-plan->hsql [{:keys [column null?]}]
-    (let [lhs (-plan->hsql (:field column))]
+    (let [lhs (-plan->hsql column)]
       (if null?
         [:is lhs nil]
         [:is-not lhs nil])))
@@ -146,6 +170,10 @@
   (-plan->hsql [{:keys [clauses]}]
     (->> (map -plan->hsql clauses)
          (concat [:or])))
+
+  OrderExpression
+  (-plan->hsql [{:keys [field direction]}]
+    [(second field) (second direction)])
 
   NotExpression
   (-plan->hsql [{:keys [clause]}]
@@ -159,8 +187,6 @@
 
 (defn query->sql
   [schema query]
-  (def s schema)
-  (def q query)
   (->> query
        (node->plan schema nil)
        plan->hsql

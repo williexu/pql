@@ -141,12 +141,12 @@
   ["order_by"
    (vec (for [arg args]
           (if (= 2 (count arg))
-            [(second arg)]
-            (vec (rest arg)))))])
+            (conj arg [:direction :asc])
+            arg)))])
 
 (defn transform-field
   [& args]
-  (str/join "." args))
+  [:field (str/join "." args)])
 
 (def transform-specification
   {:extract            transform-extract
@@ -204,3 +204,6 @@
       transform
       first
       keywordize))
+
+(pql->ast "people[name]{ order by name asc, age}")
+(parse "people[name]{ order by name}")

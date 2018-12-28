@@ -132,7 +132,7 @@ offset = <'offset'>, <whitespace>, integer;
 orderby = <'order by'>, <whitespace>, orderparam, [orderparamlist];
 <orderparamlist> = (<','>, [<whitespace>], orderparam)+;
 orderparam = !('asc' | 'desc') field, [<whitespace> direction], [<whitespace>];
-<direction> = 'asc' | 'desc';
+direction = 'asc' | 'desc';
 
 (* Parens *)
 <lparens> = '(';
