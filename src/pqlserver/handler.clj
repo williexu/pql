@@ -79,8 +79,7 @@
       (rr/status code))))
 
 (def app-routes
-  (let [db {:dbtype "postgresql" :dbname "foo"}
-        schema (clojure.edn/read-string (slurp (clojure.java.io/resource "schema.edn")))]
+  (let [schema (clojure.edn/read-string (slurp (clojure.java.io/resource "schema.edn")))]
     (routes
       (GET "/" [] "Hello World")
       (GET "/query" [query]

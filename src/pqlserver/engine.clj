@@ -23,12 +23,15 @@
 (defrecord Query [projections selection])
 (defrecord AndExpression [clauses])
 (defrecord BinaryExpression [operator column value])
-(defrecord FromExpression [projections subquery where limit offset order-by])
+(defrecord FromExpression [projections subquery where])
 (defrecord InExpression [column subquery])
 (defrecord NotExpression [clause])
 (defrecord OrExpression [clauses])
 (defrecord RegexExpression [column value])
 (defrecord NullExpression [column null?])
+(defrecord LimitExpression [subquery limit])
+(defrecord OffsetExpression [subquery limit])
+(defrecord OrderByExpression [subquery columns])
 
 (defn node->plan
   "Translates AST to a plan"
@@ -40,30 +43,37 @@
                                       :column field
                                       :value value}))
 
-            [[:from (entity :guard keyword?) [:extract columns & expr] & paging-term]]
+            [[:order-by subquery columns]]
+            (map->OrderByExpression
+              {:subquery (node->plan schema context subquery)
+               :columns columns})
+
+            [[:limit subquery limit]]
+            (map->LimitExpression
+              {:subquery (node->plan schema context subquery)
+               :limit limit})
+
+            [[:offset subquery offset]]
+            (map->OffsetExpression
+              {:subquery (node->plan schema context subquery)
+               :offset offset})
+
+            [[:from (entity :guard keyword?) [:extract columns & expr]]]
             (let [{:keys [selection] :as query-rec} (get schema entity)
-                  projections (mapv #(-> query-rec :projections % :field) columns)
-                  {:keys [limit offset order-by]} (first paging-term)]
+                  projections (mapv #(-> query-rec :projections % :field) columns)]
               (map->FromExpression
                 {:projections projections
                  :subquery selection
                  :where (some->> (first expr)
-                                 (node->plan schema entity))
-                 :limit limit
-                 :order-by order-by
-                 :offset offset}))
+                                 (node->plan schema entity))}))
 
-            [[:from (entity :guard keyword?) expr & paging-term]]
-            (let [{:keys [selection projections]} (get schema entity)
-                  {:keys [limit offset order-by]} (first paging-term)]
+            [[:from (entity :guard keyword?) expr]]
+            (let [{:keys [selection projections]} (get schema entity)]
               (map->FromExpression
                 {:projections (mapv :field (vals projections))
                  :subquery selection
                  :where (when (not-empty expr)
-                          (node->plan schema entity expr))
-                 :limit limit
-                 :order-by order-by
-                 :offset offset}))
+                          (node->plan schema entity expr))}))
 
             [[:and & exprs]]
             (map->AndExpression
@@ -90,18 +100,30 @@
   Query
   (-plan->hsql [node] node)
 
+  LimitExpression
+  (-plan->hsql [{:keys [subquery limit]}]
+    (-> (-plan->hsql subquery)
+        (assoc :limit limit)))
+
+  OffsetExpression
+  (-plan->hsql [{:keys [subquery offset]}]
+    (-> (-plan->hsql subquery)
+        (assoc :offset offset)))
+
+  OrderByExpression
+  (-plan->hsql [{:keys [subquery columns]}]
+    (-> (-plan->hsql subquery)
+        (assoc :order-by columns)))
+
   BinaryExpression
   (-plan->hsql [{:keys [column operator value]}]
     [operator column (cond-> value (keyword? value) name)])
 
   FromExpression
-  (-plan->hsql [{:keys [projections subquery where limit offset order-by]}]
+  (-plan->hsql [{:keys [projections subquery where]}]
     (-> {:select projections
          :from [(:from subquery)]}
-        (cond-> where (assoc :where (-plan->hsql where)))
-        (cond-> limit (assoc :limit limit))
-        (cond-> offset (assoc :offset offset))
-        (cond-> order-by (assoc :order-by order-by))))
+        (cond-> where (assoc :where (-plan->hsql where)))))
 
   AndExpression
   (-plan->hsql [{:keys [clauses]}]
@@ -137,6 +159,8 @@
 
 (defn query->sql
   [schema query]
+  (def s schema)
+  (def q query)
   (->> query
        (node->plan schema nil)
        plan->hsql

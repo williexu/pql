@@ -7,7 +7,7 @@
 
 (defn paging-clause?
   [v]
-  (contains? #{"limit" "offset" "order_by"} (first v)))
+  (= :pagingclause (first v)))
 
 (defn update-cond
   [m pred ks f & args]
@@ -20,18 +20,25 @@
   (let [val (get-in m ks ::not-found)]
     (apply update-cond m (not= val ::not-found) ks f args)))
 
+(defn slurp-right
+  [& vs]
+  (vec (concat (first vs) (rest vs))))
+
 (defn transform-from
   [entity & args]
   (let [paging-groups (group-by paging-clause? args)
-        paging-opts (-> (into {} (get paging-groups true))
-                        (update-when ["order_by"] #(mapv (fn [t] (mapv keyword t)) %)))
-        other-clauses (get paging-groups false)]
-    (cm/match (first other-clauses)
-              ["extract" & args]
-              ["from" entity (vec (concat (first other-clauses) (rest other-clauses))) paging-opts]
-
-              :else
-              ["from" entity (vec (concat (first other-clauses) (rest other-clauses))) paging-opts])))
+        paging-args (sort (get paging-groups true))
+        nonpaging-args (get paging-groups false)
+        other-clauses (get paging-groups false)
+        stripped-from (slurp-right
+                        ["from" entity]
+                        (apply slurp-right other-clauses))]
+    ;; Pull the paging expressions up around the from expression
+    (loop [query stripped-from
+           args paging-args]
+      (if-let [[_ [clause arg]] (first args)]
+        (recur [clause query arg] (rest args))
+        query))))
 
 (defn transform-subquery
   ([entity]
@@ -142,8 +149,7 @@
   (str/join "." args))
 
 (def transform-specification
-  {
-   :extract            transform-extract
+  {:extract            transform-extract
    :from               transform-from
    :subquery           transform-subquery
    :expr-or            transform-expr-or

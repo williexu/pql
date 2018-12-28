@@ -126,7 +126,7 @@ sqstring = (<singlequote>, stringwithoutsinglequotes, <singlequote>);
 groupby  = <'group by'>, <whitespace>, fieldlist;
 
 (* Paging *)
-<pagingclause> = limit | offset | orderby;
+pagingclause = limit | offset | orderby;
 limit = <'limit'>, <whitespace>, integer;
 offset = <'offset'>, <whitespace>, integer;
 orderby = <'order by'>, <whitespace>, orderparam, [orderparamlist];
