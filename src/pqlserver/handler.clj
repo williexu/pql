@@ -2,6 +2,7 @@
   (:require [compojure.core :refer :all]
             [clojure.tools.nrepl.server :refer [start-server]]
             [cheshire.core :as json]
+            [cheshire.generate :refer [add-encoder encode-map encode-seq]]
             [clojure.tools.logging :as log]
             [compojure.route :as route]
             [clojure.java.jdbc :as jdbc]
@@ -9,11 +10,11 @@
             [clojure.core.async :as async]
             [pqlserver.parser :refer [pql->ast]]
             [pqlserver.engine :refer [query->sql]]
+            [pqlserver.json :as pql-json]
             [ring.util.response :as rr]
             [ring.util.io :refer [piped-input-stream]]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]])
-  (:import [java.io BufferedWriter OutputStreamWriter IOException]
-           [java.sql Connection SQLException]))
+  (:import [java.io IOException]))
 
 (defonce nrepl-server (start-server :port 8002))
 
@@ -64,7 +65,7 @@
            (catch IOException e#
              ;; IOExceptions are things like broken pipes and will mostly come
              ;; from query interrupts. No need to spam logs.
-             (log/debug e# "Error streaming response")
+             (log/info e# "Error streaming response")
              (~cancel-fn))
            (catch Exception e#
              (log/error e# "Error streaming response")
@@ -111,4 +112,5 @@
       (route/not-found "Not Found"))))
 
 (def app
-  (wrap-defaults app-routes api-defaults))
+  (do (pql-json/add-common-json-encoders!)
+      (wrap-defaults app-routes api-defaults)))
