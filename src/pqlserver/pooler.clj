@@ -8,7 +8,7 @@
    :read-only true
    :connection-timeout 30000
    :validation-timeout 5000
-   :idle-timeout 600000
+   :idle-timeout 30000
    :max-lifetime 1800000
    :minimum-idle 10
    :maximum-pool-size 10

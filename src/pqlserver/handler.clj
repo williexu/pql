@@ -25,28 +25,18 @@
 
    Streaming is accomplished by performing a reduce over a jdbc reducible-query
    stream. The reduce is executed purely for side-effects, so its initial value
-   is irrelevant. Query cancellation is managed with the kill? channel. Putting
-   a value to kill? will abort the query and exit the future cleanly.
+   is irrelevant.
 
    I'm not sure about the performance overhead of doing this on channels, but
    it seems quick enough to me at the moment."
-  [query result-chan kill?]
+  [query result-chan]
   (jdbc/with-db-connection [conn {:datasource @datasource}]
     (try
       (reduce (fn [_ record]
-                (async/alt!!
-                  [kill?]
-                  ([v _]
-                   (log/infof "Result stream received signal %s; closing" v)
-                   (throw (Exception.)))
-                  [[result-chan record]]
-                  ([_ _])))
+                (async/>!! result-chan record))
               ::init
               (jdbc/reducible-query conn query {:fetch-size 100}))
-      ;; Eat the exception; it was just for control flow.
-      (catch Exception e)
       (finally
-        (async/close! kill?)
         (async/close! result-chan)))))
 
 (defn chan-seq!!
@@ -58,15 +48,14 @@
 (defmacro streamed-response
   "Execute body, writing results to a piped-input-stream, which may be passed
    to a ring response."
-  [writer-var cancel-fn & body]
+  [writer-var & body]
   `(piped-input-stream
      (fn [ostream#]
        (with-open [~writer-var (io/writer ostream# :encoding "UTF-8")]
          (try
            (do ~@body)
            (catch Exception e#
-             (log/error e# "Error streaming response")
-             (~cancel-fn)))))))
+             (log/error e# "Error streaming response")))))))
 
 (defn json-response
   "Produce a json ring response"
@@ -87,18 +76,21 @@
                           pql->ast
                           (query->sql schema))
                  result-chan (async/chan)
-                 kill? (async/chan)
-                 cancel-fn #(async/>!! kill? ::cancel)
                  ;; Execute the query in a future, writing records to
                  ;; result-chan. In the main thread, lazily pull records off
                  ;; the channel, format them to json, and write to a
                  ;; piped-input-stream (via streamed-response). Although we do
-                 ;; not track the state of the future, we know that it has
-                 ;; finished its work when result-seq is fully consumed.
-                 _ (future (query->chan sql result-chan kill?))
+                 ;; not track the state of the future, we know it can resolve
+                 ;; in two ways: if streamed-response fully consumes
+                 ;; result-seq, then the associated resultset will be consumed
+                 ;; and the thread will be freed. Alternatively, if
+                 ;; streamed-response throws an exception, HikariCP will
+                 ;; steal back the database connection after a period of
+                 ;; inactivity, again allowing query->chan to exit and freeing
+                 ;; the thread.
+                 _ (future (query->chan sql result-chan))
                  result-seq (chan-seq!! result-chan)]
              (streamed-response buf
-                                cancel-fn
                                 (-> result-seq
                                     (json/generate-stream buf {:pretty true})
                                     json-response))))
