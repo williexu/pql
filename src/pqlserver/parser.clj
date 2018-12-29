@@ -31,7 +31,7 @@
         nonpaging-args (get paging-groups false)
         other-clauses (get paging-groups false)
         stripped-from (slurp-right
-                        ["from" entity]
+                        [:from (keyword entity)]
                         (apply slurp-right other-clauses))]
     ;; Pull the paging expressions up around the from expression
     (loop [query stripped-from
@@ -42,41 +42,41 @@
 
 (defn transform-subquery
   ([entity]
-   ["subquery" entity])
+   [:subquery (keyword entity)])
   ([entity arg2]
-   ["subquery" entity arg2]))
+   [:subquery (keyword entity) arg2]))
 
 (defn transform-extract
   [& args]
-  ["extract" (vec args)])
+  [:extract (vec args)])
 
 (defn transform-expr-or
   ([data] data)
-  ([data & args] (vec (concat ["or" data] args))))
+  ([data & args] (vec (concat [:or data] args))))
 
 (defn transform-expr-and
   ([data] data)
-  ([data & args] (vec (concat ["and" data] args))))
+  ([data & args] (vec (concat [:and data] args))))
 
 (defn transform-expr-not
   ([data] data)
-  ([_ data] ["not" data]))
+  ([_ data] [:not data]))
 
 (defn transform-function
   [entity args]
-  (vec (concat ["function" entity] args)))
+  (vec (concat [:function (keyword entity)] args)))
 
 (defn transform-condexpression
   [a b c]
   (case b
-    "!=" ["not" ["=" a c]]
-    "!~" ["not" ["~" a c]]
-    "!~*" ["not" ["~*" a c]]
-    [b a c]))
+    "!=" [:not [:= a c]]
+    "!~" [:not [(keyword "~") a c]]
+    "!~*" [:not [(keyword "~*") a c]]
+    [(keyword b) a c]))
 
 (defn transform-condexpnull
   [entity type]
-  ["null?" entity
+  [:null? entity
    (case (first type)
      :condisnull true
      :condisnotnull false)])
@@ -87,7 +87,7 @@
 
 (defn transform-groupedliterallist
   [& args]
-  ["array" args])
+  [:array args])
 
 (defn transform-sqstring
   [s]
@@ -121,15 +121,15 @@
 
 (defn transform-groupby
   [& args]
-  (conj ["group_by"] (vec args)))
+  (conj [:group-by] (vec args)))
 
 (defn transform-limit
   [arg]
-  ["limit" arg])
+  [:limit arg])
 
 (defn transform-offset
   [arg]
-  ["offset" arg])
+  [:offset arg])
 
 (defn transform-array
   "strip the brackets from an array and cast to a vec"
@@ -138,18 +138,19 @@
 
 (defn transform-orderby
   [& args]
-  ["order_by"
+  [:order-by
    (vec (for [arg args]
           (if (= 2 (count arg))
             (conj arg [:direction :asc])
-            arg)))])
+            (mapv #(cond->> % (and (vector? %) (= :direction (first %))) (mapv keyword)) arg))))])
 
 (defn transform-field
   [& args]
-  [:field (str/join "." args)])
+  [:field (keyword (str/join "." args))])
 
 (def transform-specification
   {:extract            transform-extract
+   :field              transform-field
    :from               transform-from
    :subquery           transform-subquery
    :expr-or            transform-expr-or
@@ -171,36 +172,17 @@
    :exp                transform-exp
    :groupby            transform-groupby
    :limit              transform-limit
-   :field              transform-field
    :offset             transform-offset
    :orderby            transform-orderby})
-
 
 (defn transform
   [tree]
   (insta/transform transform-specification tree))
 
-
 (def parse
   (insta/parser
     (clojure.java.io/resource "pql-grammar.ebnf")))
 
-(defn mapkeys
-  [f m]
-  (into {} (concat (for [[k v] m] [(f k) v]))))
-
-(defn keywordize
-  [ast]
-  (cond
-    (vector? ast) (mapv keywordize ast)
-    (string? ast) (-> ast (str/replace \_ \-) keyword)
-    (map? ast) (->> ast
-                    (mapkeys keywordize))
-    :else ast))
-
 (defn pql->ast
   [pql]
-  (-> (parse pql)
-      transform
-      first
-      keywordize))
+  (-> pql parse transform first))

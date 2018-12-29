@@ -1,77 +1,79 @@
 (ns pqlserver.parser-test
   (:require [clojure.test :refer :all]
+            [clojure.data :as data]
             [pqlserver.parser :refer :all]))
 
 #_(test-pql->ast)
 
 (deftest test-pql->ast
-  (are [pql ast] (= ast (pql->ast pql))
+  (are [pql expected-ast]
+       (let [actual (pql->ast pql)]
+         (is (= expected-ast actual)
+             (let [pretty-diff (-> (data/diff expected-ast actual) clojure.pprint/pprint with-out-str)
+                   actual-pretty (-> actual clojure.pprint/pprint with-out-str)
+                   expected-pretty (-> expected-ast clojure.pprint/pprint with-out-str)]
+               (format "expected:\n%s\ngot:\n%s\ndiff:\n%s\n"
+                       expected-pretty actual-pretty pretty-diff))))
 
        "people {}"
        [:from :people []]
 
-       ; basic binary expression
        "people { name = 'susan' }"
-       [:from :people [:= [:field :name] :susan]]
+       [:from :people [:= [:field :name] "susan"]]
 
-       ; odd spacing
        " people { name = 'susan' }"
-       [:from :people [:= [:field :name] :susan]]
+       [:from :people [:= [:field :name] "susan"]]
 
        " people { name = 'susan' } "
-       [:from :people [:= [:field :name] :susan]]
+       [:from :people [:= [:field :name] "susan"]]
 
        " people{name = 'susan' } "
-       [:from :people [:= [:field :name] :susan]]
+       [:from :people [:= [:field :name] "susan"]]
 
        " people{name='susan'} "
-       [:from :people [:= [:field :name] :susan]]
+       [:from :people [:= [:field :name] "susan"]]
 
-       ; in expression
        "people { name in ['foo', 'bar', 'baz']}"
        [:from :people [:in [:field :name] [:array ["foo" "bar" "baz"]]]]
 
-       ; and expression
        "people { name = 'foo' and name = 'bar'}"
-       [:from :people [:and [:= [:field :name] :foo] [:= [:field :name] :bar]]]
+       [:from :people [:and [:= [:field :name] "foo"] [:= [:field :name] "bar"]]]
 
-       ; or expression
        "people { name = 'foo' or name = 'bar'}"
-       [:from :people [:or [:= [:field :name] :foo] [:= [:field :name] :bar]]]
+       [:from :people [:or [:= [:field :name] "foo"] [:= [:field :name] "bar"]]]
 
-       ; combined and/or
        "people { name = 'foo' or (name = 'bar' and name = 'baz')}"
-       [:from :people [:or [:= [:field :name] :foo]
-                       [:and [:= [:field :name] :bar]
-                        [:= [:field :name] :baz]]]]
+       [:from :people [:or [:= [:field :name] "foo"]
+                       [:and [:= [:field :name] "bar"]
+                        [:= [:field :name] "baz"]]]]
 
        "people { name != 'susan'}"
-       [:from :people [:not [:= [:field :name] :susan]]]
+       [:from :people [:not [:= [:field :name] "susan"]]]
 
        "people { name ~ 'susan'}"
-       [:from :people [(keyword "~") [:field :name] :susan]]
+       [:from :people [(keyword "~") [:field :name] "susan"]]
 
        "people { name !~ 'susan'}"
-       [:from :people [:not [(keyword "~") [:field :name] :susan]]]
+       [:from :people [:not [(keyword "~") [:field :name] "susan"]]]
 
        "people { name ~* 'susan'}"
-       [:from :people [(keyword "~*") [:field :name] :susan]]
+       [:from :people [(keyword "~*") [:field :name] "susan"]]
 
        "people { name !~* 'susan'}"
-       [:from :people [:not [(keyword "~*") [:field :name] :susan]]]
+       [:from :people [:not [(keyword "~*") [:field :name] "susan"]]]
 
        "people [name] { name !~* 'susan'}"
-       [:from :people [:extract [[:field :name]] [:not [(keyword "~*") [:field :name] :susan]]]]
+       [:from :people [:extract [[:field :name]] [:not [(keyword "~*") [:field :name] "susan"]]]]
 
        "people [name, age] { name !~* 'susan'}"
-       [:from :people [:extract [[:field :name] [:field :age]] [:not [(keyword "~*") [:field :name] :susan]]]]
+       [:from :people [:extract [[:field :name] [:field :age]] [:not [(keyword "~*") [:field :name] "susan"]]]]
 
        "people [name, age] { name in pets[name] {owner = 'foobar'}}"
        [:from :people [:extract [[:field :name] [:field :age]]
-                       [:in [:field :name] [:from :pets [:extract [[:field :name]] [:= [:field :owner] :foobar]]]]]]
+                       [:in [:field :name] [:from :pets [:extract [[:field :name]] [:= [:field :owner] "foobar"]]]]]]
 
        "people { name in pets[name] {owner = 'foobar'}}"
-       [:from :people [:in [:field :name] [:from :pets [:extract [[:field :name]] [:= [:field :owner] :foobar]]]]]
+       [:from :people [:in [:field :name] [:from :pets [:extract [[:field :name]] [:= [:field :owner] "foobar"]]]]]
 
        "people { name is null }"
        [:from :people [:null? [:field :name] true]]
@@ -88,7 +90,6 @@
        "people { name is not null order by name limit 1 offset 10}"
        [:order-by [:offset [:limit [:from :people [:null? [:field :name] false]] 1] 10]
         [[:orderparam [:field :name] [:direction :asc]]]]
-
 
        "people { name is not null order by name asc limit 1 offset 10}"
        [:order-by [:offset [:limit [:from :people [:null? [:field :name] false]] 1] 10]
