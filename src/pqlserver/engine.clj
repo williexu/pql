@@ -131,8 +131,7 @@
               {:clause (node->plan schema expr)})))
 
 (defprotocol SQLGen
-  "Protocol for converting plan nodes to HoneySQL. This will need adaptation to
-   generalize beyond Postgres."
+  "Protocol for converting plan nodes to HoneySQL."
   (-plan->hsql [node]))
 
 (extend-protocol SQLGen
