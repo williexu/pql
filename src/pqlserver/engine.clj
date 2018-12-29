@@ -1,26 +1,27 @@
 (ns pqlserver.engine
+  "Parse AST to HoneySQL, to SQL.
 
-  "Parse AST to HoneySQL, to SQL. This two-step process entails converting AST
-   to a plan tree, then converting the plan to HoneySQL, from which SQL can
-   easily be emitted."
+   Conversion of AST to HoneySQL is managed by two recursive descent parsers,
+   applied in succession. The first parser (node->plan) converts the AST to a
+   'plan tree' of nodes conforming to the types specified in the defrecords
+   below. The second parser (plan->hsql) converts the plan tree to HoneySQL.
+   Conversion from HoneySQL to proper SQL is handled by the HoneySQL formatter
+   functions. The parsers are separated in anticipation of additional supported
+   database backends."
   (:require [clojure.core.match :as cm]
             [zip.visit :as zv]
             [clojure.zip :as z]
-            [honeysql.core :as hcore]
-            [honeysql.format :as hfmt]))
+            [honeysql.core :as hc]
+            [honeysql.format :as hf]))
 
-(defmethod hfmt/fn-handler "~" [_ field pattern]
-  (str (hfmt/to-sql field) " ~ " (hfmt/to-sql pattern)))
+(defmethod hf/fn-handler "~" [_ field pattern]
+  (str (hf/to-sql field) " ~ " (hf/to-sql pattern)))
 
-(defmethod hfmt/fn-handler "~*" [_ field pattern]
-  (str (hfmt/to-sql field) " ~* " (hfmt/to-sql pattern)))
+(defmethod hf/fn-handler "~*" [_ field pattern]
+  (str (hf/to-sql field) " ~* " (hf/to-sql pattern)))
 
 (def binary-op?
   #{:= :< :<= :> :>= (keyword "~") (keyword "~*")})
-
-(defprotocol SQLGen
-  "Translates a plan to HoneySQL"
-  (-plan->hsql [node]))
 
 ;; Plan node types
 (defrecord Query [projections selection])
@@ -38,10 +39,11 @@
 (defrecord OrderExpression [field direction])
 (defrecord GroupByExpression [subquery groupings])
 (defrecord FieldExpression [projection])
-(defrecord FunctionExpression [function args])
+(defrecord FnExpression [function args])
 
 (defn node->plan
-  "Translates AST to a plan"
+  "Codifies a parse tree from parser.clj to a query plan. This parser is
+   database-agnostic."
   [schema node]
   (cm/match [node]
             [[(op :guard binary-op?) column value]]
@@ -61,7 +63,7 @@
                 {:projection qualified-field}))
 
             [[:function function & args]]
-            (map->FunctionExpression
+            (map->FnExpression
               {:function function
                :args (mapv (partial node->plan schema) args)})
 
@@ -122,6 +124,11 @@
             (map->NotExpression
               {:clause (node->plan schema expr)})))
 
+(defprotocol SQLGen
+  "Protocol for converting plan nodes to HoneySQL. This will need adaptation to
+   generalize beyond Postgres."
+  (-plan->hsql [node]))
+
 (extend-protocol SQLGen
   Query
   (-plan->hsql [node] node)
@@ -170,12 +177,12 @@
   (-plan->hsql [{:keys [projection]}]
     projection)
 
-  FunctionExpression
+  FnExpression
   (-plan->hsql [{:keys [function args]}]
     (let [args (if (empty? args)
                  [:*]
                  (map -plan->hsql args))]
-      (apply hcore/call function args)))
+      (apply hc/call function args)))
 
   NullExpression
   (-plan->hsql [{:keys [column null?]}]
@@ -204,7 +211,12 @@
   (-plan->hsql plan))
 
 (def update-meta
-  "Adds metadata to each from node"
+  "Annotates the metadata of each `from` node with `context` equal to the
+   relevant entity. This is necessary because clauses like limit, offset,
+   and order-by require knowledge of fields they are operating against
+   for validation, but such context is unavailable in a top-down parse of the
+   AST. Annotating the AST prior to parsing eliminates the need to keep track
+   of this context while parsing."
   (zv/visitor :pre [n s]
               (when (and (vector? n) (= :from (first n)))
                 {:node (vary-meta n assoc :context (second n))
@@ -226,4 +238,4 @@
     (->> annotated-query
          (node->plan schema)
          plan->hsql
-         hcore/format)))
+         hc/format)))
