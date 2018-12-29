@@ -2,7 +2,6 @@
   (:require [hikari-cp.core :as hk]
             [clojure.java.jdbc :as jdbc]))
 
-
 (def datasource-options
   {:auto-commit false
    :read-only true
@@ -14,7 +13,6 @@
    :pool-name "db-pool"
    :adapter "postgresql"
    :database-name "foo"})
-
 
 (defonce datasource
   (delay (hk/make-datasource datasource-options)))
