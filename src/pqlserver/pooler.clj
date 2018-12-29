@@ -8,10 +8,9 @@
    :read-only true
    :connection-timeout 30000
    :validation-timeout 5000
-   :idle-timeout 30000
+   :idle-timeout 5000
    :max-lifetime 1800000
-   :minimum-idle 10
-   :maximum-pool-size 10
+   :maximum-pool-size 25
    :pool-name "db-pool"
    :adapter "postgresql"
    :database-name "foo"})
