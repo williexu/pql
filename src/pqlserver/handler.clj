@@ -6,14 +6,13 @@
             [clojure.tools.logging :as log]
             [compojure.route :as route]
             [clojure.java.jdbc :as jdbc]
-            [clojure.java.io :as io]
             [clojure.core.async :as async]
             [pqlserver.parser :refer [pql->ast]]
             [pqlserver.engine :refer [query->sql]]
             [pqlserver.pooler :refer [datasource]]
+            [pqlserver.http :refer [streamed-response]]
             [pqlserver.json :as pql-json]
             [ring.util.response :as rr]
-            [ring.util.io :refer [piped-input-stream]]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]])
   (:import [java.io IOException]))
 
@@ -45,17 +44,6 @@
   (lazy-seq (when-let [v (async/<!! c)]
               (cons v (chan-seq!! c)))))
 
-(defmacro streamed-response
-  "Execute body, writing results to a piped-input-stream, which may be passed
-   to a ring response."
-  [writer-var & body]
-  `(piped-input-stream
-     (fn [ostream#]
-       (with-open [~writer-var (io/writer ostream# :encoding "UTF-8")]
-         (try
-           (do ~@body)
-           (catch Exception e#
-             (log/error e# "Error streaming response")))))))
 
 (defn json-response
   "Produce a json ring response"
