@@ -144,6 +144,10 @@
             (conj arg [:direction :asc])
             (mapv #(cond->> % (and (vector? %) (= :direction (first %))) (mapv keyword)) arg))))])
 
+(defn transform-jsonprojection
+  [& args]
+  (vec (concat [:json-query] (mapv keyword args))))
+
 (defn transform-field
   [& args]
   [:field (keyword (str/join "." args))])
@@ -151,6 +155,7 @@
 (def transform-specification
   {:extract            transform-extract
    :field              transform-field
+   :jsonprojection     transform-jsonprojection
    :from               transform-from
    :subquery           transform-subquery
    :expr-or            transform-expr-or

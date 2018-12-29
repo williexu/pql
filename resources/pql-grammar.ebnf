@@ -49,38 +49,40 @@ subquery = entity, [<whitespace>], where;
 
 (* Conditional expression *)
 condexpression  = (condexpregexp | condexpciregexp | condexpregexparray | condexpinequality | condexpmatch | condexpnotmatch | condexpnotregexp | condexpnotciregexp | condexpin);
-<condexpregexp> = field, [<whitespace>], condregexp, [<whitespace>], valueregexp;
-<condexpciregexp> = field, [<whitespace>], condciregexp, [<whitespace>], valueregexp;
-<condexpregexparray> = field, [<whitespace>], condregexparray, [<whitespace>], valueregexparray;
-<condexpinequality> = field, [<whitespace>], condinequality, [<whitespace>], valueordered;
-<condexpmatch>  = field, [<whitespace>], condmatch, [<whitespace>], literal;
-<condexpin>     = (field | groupedfieldlist), [<whitespace>], condin, [<whitespace>], valuein;
-<condexpnotmatch> = field, [<whitespace>], condnotmatch, [<whitespace>], literal;
-<condexpnotregexp> = field, [<whitespace>], condnotregexp, [<whitespace>], literal;
-<condexpnotciregexp> = field, [<whitespace>], condnotciregexp, [<whitespace>], literal;
+<condexpregexp> = projectable, [<whitespace>], condregexp, [<whitespace>], valueregexp;
+<condexpciregexp> = projectable, [<whitespace>], condciregexp, [<whitespace>], valueregexp;
+<condexpregexparray> = projectable, [<whitespace>], condregexparray, [<whitespace>], valueregexparray;
+<condexpinequality> = projectable, [<whitespace>], condinequality, [<whitespace>], valueordered;
+<condexpmatch>  = projectable, [<whitespace>], condmatch, [<whitespace>], literal;
+<condexpin>     = (projectable | groupedfieldlist), [<whitespace>], condin, [<whitespace>], valuein;
+<condexpnotmatch> = projectable, [<whitespace>], condnotmatch, [<whitespace>], literal;
+<condexpnotregexp> = projectable, [<whitespace>], condnotregexp, [<whitespace>], literal;
+<condexpnotciregexp> = projectable, [<whitespace>], condnotciregexp, [<whitespace>], literal;
 
 (* Special is null/is not null expression *)
-condexpnull   = field, [<whitespace>], (condisnull | condisnotnull);
+condexpnull   = projectable, [<whitespace>], (condisnull | condisnotnull);
 condisnull    = <'is null'>;
 condisnotnull = <'is not null'>;
 
 (* Conditional expression parts *)
 groupedfieldlist = <lbracket>, [<whitespace>], fieldlist, [<whitespace>], <rbracket>;
-<fieldlist>      = (field | function), [ [<whitespace>], <','>, [<whitespace>], fieldlist ];
+<fieldlist>      = (projectable | function), [ [<whitespace>], <','>, [<whitespace>], fieldlist ];
 function         = functionname, [<whitespace>], groupedarglist;
 <functionname>   = 'count' | 'avg' | 'sum' | 'min' | 'max' | 'to_string';
 
 groupedarglist = <lparens>, [<whitespace>], [arglist], [<whitespace>], <rparens>;
-<arglist>      = (field | string), [ [<whitespace>], <','>, [<whitespace>], stringlist ];
+<arglist>      = (projectable | string), [ [<whitespace>], <','>, [<whitespace>], stringlist ];
 <stringlist>   = string , [ [<whitespace>], <','>, [<whitespace>], stringlist ];
 
 (* Represents a field from an entity *)
-field = #'[a-zA-Z0-9_]+\??' | (dottedfield, fieldpath);
+<projectable> = (field | jsonprojection);
+field = #'[a-zA-Z0-9_]+\??';
+jsonprojection = (dottedfield, fieldpath);
 <fieldpath> = <'.'>, (quotedfield | standardfield | matchfield) , [fieldpath];
 <quotedfield> = #'\".*?\"(?=\.|\s)';
 <matchfield> = #'match\(.*?\)';
 <standardfield> = #'[^\s\.\"]+';
-<dottedfield> = 'facts' | 'trusted' | 'parameters';
+<dottedfield> = #'[a-zA-Z0-9_]+\??'
 
 <condregexp>      = '~';
 <condciregexp>     = '~*'

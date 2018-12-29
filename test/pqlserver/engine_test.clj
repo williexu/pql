@@ -121,4 +121,11 @@
 
        [:group-by [:from :people [:extract [[:field :name] [:function :count [:field :age] [:field :name]]]]] [[:field :name]]]
        ["SELECT people.name, count(people.age, people.name) FROM people GROUP BY people.name"]
+
+       [:group-by [:from :people [:extract [[:field :name]] [:null? [:json-query :name :foo] false]]] [[:field :name] [:field :age]]]
+       ["SELECT people.name FROM people WHERE name->>'foo' IS NOT NULL GROUP BY people.name, people.age"]
+
+       [:group-by [:from :people [:extract [[:field :name]] [:null? [:json-query :name :foo :bar] false]]] [[:field :name] [:field :age]]]
+       ["SELECT people.name FROM people WHERE name->'foo'->>'bar' IS NOT NULL GROUP BY people.name, people.age"]
+
        ))

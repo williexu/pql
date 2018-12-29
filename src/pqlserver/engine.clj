@@ -9,6 +9,7 @@
    functions. The parsers are separated in anticipation of additional supported
    database backends."
   (:require [clojure.core.match :as cm]
+            [clojure.string :as str]
             [zip.visit :as zv]
             [clojure.zip :as z]
             [honeysql.core :as hc]
@@ -40,6 +41,7 @@
 (defrecord GroupByExpression [subquery groupings])
 (defrecord FieldExpression [projection])
 (defrecord FnExpression [function args])
+(defrecord JsonQueryExpression [path])
 
 (defn node->plan
   "Codifies a parse tree from parser.clj to a query plan. This parser is
@@ -61,6 +63,10 @@
                   qualified-field (-> schema context :projections field :field)]
               (map->FieldExpression
                 {:projection qualified-field}))
+
+            [[:json-query & path]]
+            (map->JsonQueryExpression
+              {:path path})
 
             [[:function function & args]]
             (map->FnExpression
@@ -176,6 +182,14 @@
   FieldExpression
   (-plan->hsql [{:keys [projection]}]
     projection)
+
+  JsonQueryExpression
+  (-plan->hsql [{:keys [path]}]
+    (let [term (->> path
+                    (map name)
+                    (reduce #(format "%s->'%s'" %1 %2)))
+          corrected-term (str/replace term #"->('\w+')$" "->>$1")]
+      (hc/raw corrected-term)))
 
   FnExpression
   (-plan->hsql [{:keys [function args]}]
