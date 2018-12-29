@@ -121,7 +121,7 @@
 
 (defn transform-groupby
   [& args]
-  (vec (concat ["group_by"] args)))
+  (conj ["group_by"] (vec args)))
 
 (defn transform-limit
   [arg]
@@ -204,6 +204,3 @@
       transform
       first
       keywordize))
-
-(pql->ast "people[name]{ order by name asc, age}")
-(parse "people[name]{ order by name}")

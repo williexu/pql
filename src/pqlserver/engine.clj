@@ -1,8 +1,11 @@
 (ns pqlserver.engine
+
   "Parse AST to HoneySQL, to SQL. This two-step process entails converting AST
    to a plan tree, then converting the plan to HoneySQL, from which SQL can
    easily be emitted."
   (:require [clojure.core.match :as cm]
+            [zip.visit :as zv]
+            [clojure.zip :as z]
             [honeysql.core :as hcore]
             [honeysql.format :as hfmt]))
 
@@ -33,16 +36,17 @@
 (defrecord OffsetExpression [subquery limit])
 (defrecord OrderByExpression [subquery orderings])
 (defrecord OrderExpression [field direction])
+(defrecord GroupByExpression [subquery groupings])
 (defrecord FieldExpression [projection])
 (defrecord FunctionExpression [function args])
 
 (defn node->plan
   "Translates AST to a plan"
-  [schema context node]
+  [schema node]
   (cm/match [node]
             [[(op :guard binary-op?) column value]]
             (map->BinaryExpression {:operator op
-                                    :column (node->plan schema context column)
+                                    :column (node->plan schema column)
                                     :value value})
 
             [[:orderparam field direction]]
@@ -51,37 +55,43 @@
                :direction direction})
 
             [[:field field]]
-            (let [qualified-field (-> schema context :projections field :field)]
+            (let [context (:context (meta node))
+                  qualified-field (-> schema context :projections field :field)]
               (map->FieldExpression
                 {:projection qualified-field}))
 
             [[:function function & args]]
             (map->FunctionExpression
               {:function function
-               :args args})
+               :args (mapv (partial node->plan schema) args)})
 
             [[:order-by subquery orderings]]
             (map->OrderByExpression
-              {:subquery (node->plan schema context subquery)
-               :orderings (mapv (partial node->plan schema context) orderings)})
+              {:subquery (node->plan schema subquery)
+               :orderings (mapv (partial node->plan schema) orderings)})
+
+            [[:group-by subquery groupings]]
+            (map->GroupByExpression
+              {:subquery (node->plan schema subquery)
+               :groupings (mapv (partial node->plan schema) groupings)})
 
             [[:limit subquery limit]]
             (map->LimitExpression
-              {:subquery (node->plan schema context subquery)
+              {:subquery (node->plan schema subquery)
                :limit limit})
 
             [[:offset subquery offset]]
             (map->OffsetExpression
-              {:subquery (node->plan schema context subquery)
+              {:subquery (node->plan schema subquery)
                :offset offset})
 
             [[:from (entity :guard keyword?) [:extract columns & expr]]]
             (let [{:keys [selection] :as query-rec} (get schema entity)]
               (map->FromExpression
-                {:projections (mapv (partial node->plan schema entity) columns)
+                {:projections (mapv (partial node->plan schema) columns)
                  :subquery selection
                  :where (some->> (first expr)
-                                 (node->plan schema entity))}))
+                                 (node->plan schema))}))
 
             [[:from (entity :guard keyword?) expr]]
             (let [{:keys [selection projections]} (get schema entity)]
@@ -89,28 +99,28 @@
                 {:projections (mapv :field (vals projections))
                  :subquery selection
                  :where (when (not-empty expr)
-                          (node->plan schema entity expr))}))
+                          (node->plan schema expr))}))
 
             [[:and & exprs]]
             (map->AndExpression
-              {:clauses (map (partial node->plan schema context) exprs)})
+              {:clauses (map (partial node->plan schema) exprs)})
 
             [[:or & exprs]]
             (map->OrExpression
-              {:clauses (map (partial node->plan schema context) exprs)})
+              {:clauses (map (partial node->plan schema) exprs)})
 
             [[:null? column value]]
-            (let [column (node->plan schema context column)]
+            (let [column (node->plan schema column)]
               (map->NullExpression {:column column :null? value}))
 
             [[:in column subquery]]
             (map->InExpression
-              {:column (node->plan schema context column)
-               :subquery (node->plan schema context subquery)})
+              {:column (node->plan schema column)
+               :subquery (node->plan schema subquery)})
 
             [[:not expr]]
             (map->NotExpression
-              {:clause (node->plan schema context expr)})))
+              {:clause (node->plan schema expr)})))
 
 (extend-protocol SQLGen
   Query
@@ -130,6 +140,11 @@
   (-plan->hsql [{:keys [subquery orderings]}]
     (-> (-plan->hsql subquery)
         (assoc :order-by (map -plan->hsql orderings))))
+
+  GroupByExpression
+  (-plan->hsql [{:keys [subquery groupings]}]
+    (-> (-plan->hsql subquery)
+        (assoc :group-by (map -plan->hsql groupings))))
 
   BinaryExpression
   (-plan->hsql [{:keys [column operator value]}]
@@ -157,7 +172,10 @@
 
   FunctionExpression
   (-plan->hsql [{:keys [function args]}]
-    [(apply hcore/call function args)])
+    (let [args (if (empty? args)
+                 [:*]
+                 (map -plan->hsql args))]
+      (apply hcore/call function args)))
 
   NullExpression
   (-plan->hsql [{:keys [column null?]}]
@@ -185,9 +203,27 @@
 (defn plan->hsql [plan]
   (-plan->hsql plan))
 
+(def update-meta
+  "Adds metadata to each from node"
+  (zv/visitor :pre [n s]
+              (when (and (vector? n) (= :from (first n)))
+                {:node (vary-meta n assoc :context (second n))
+                 :state (second n)})))
+
+(def fill-meta
+  (zv/visitor
+    :post [n s]
+    (let [ctx (or (:context (meta n)) s)]
+      (when (vector? n)
+        {:node (vary-meta n assoc :context ctx)
+         :state ctx}))))
+
 (defn query->sql
   [schema query]
-  (->> query
-       (node->plan schema nil)
-       plan->hsql
-       hcore/format))
+  (let [annotated-query (-> (z/vector-zip query)
+                            (zv/visit nil [update-meta fill-meta])
+                            :node)]
+    (->> annotated-query
+         (node->plan schema)
+         plan->hsql
+         hcore/format)))

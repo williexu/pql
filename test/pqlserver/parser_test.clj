@@ -116,4 +116,19 @@
 
        "people {limit 10}"
        [:limit [:from :people []] 10]
+
+       "people [name] {group by name}"
+       [:group-by [:from :people [:extract [[:field :name]]]] [[:field :name]]]
+
+       "people [name, count()] {group by name}"
+       [:group-by [:from :people [:extract [[:field :name] [:function :count]]]] [[:field :name]]]
+
+       "people [name, count(age)] {group by name}"
+       [:group-by [:from :people [:extract [[:field :name] [:function :count [:field :age]]]]] [[:field :name]]]
+
+       "people [name] {name is not null group by name}"
+       [:group-by [:from :people [:extract [[:field :name]] [:null? [:field :name] false]]] [[:field :name]]]
+
+       "people [name] {name is not null group by name, age}"
+       [:group-by [:from :people [:extract [[:field :name]] [:null? [:field :name] false]]] [[:field :name] [:field :age]]]
        ))

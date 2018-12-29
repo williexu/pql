@@ -102,4 +102,23 @@
         1 10]
 
        [:limit [:from :people []] 10]
-       ["SELECT people.name, people.age FROM people LIMIT ?" 10]))
+       ["SELECT people.name, people.age FROM people LIMIT ?" 10]
+
+       [:group-by [:from :people [:extract [[:field :name]]]] [[:field :name]]]
+       ["SELECT people.name FROM people GROUP BY people.name"]
+
+       [:group-by [:from :people [:extract [[:field :name]] [:null? [:field :name] false]]] [[:field :name]]]
+       ["SELECT people.name FROM people WHERE people.name IS NOT NULL GROUP BY people.name"]
+
+       [:group-by [:from :people [:extract [[:field :name]] [:null? [:field :name] false]]] [[:field :name] [:field :age]]]
+       ["SELECT people.name FROM people WHERE people.name IS NOT NULL GROUP BY people.name, people.age"]
+
+       [:group-by [:from :people [:extract [[:field :name] [:function :count]]]] [[:field :name]]]
+       ["SELECT people.name, count(*) FROM people GROUP BY people.name"]
+
+       [:group-by [:from :people [:extract [[:field :name] [:function :count [:field :age]]]]] [[:field :name]]]
+       ["SELECT people.name, count(people.age) FROM people GROUP BY people.name"]
+
+       [:group-by [:from :people [:extract [[:field :name] [:function :count [:field :age] [:field :name]]]]] [[:field :name]]]
+       ["SELECT people.name, count(people.age, people.name) FROM people GROUP BY people.name"]
+       ))
