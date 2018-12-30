@@ -25,10 +25,10 @@
   #{:= :< :<= :> :>= (keyword "~") (keyword "~*")})
 
 ;; Plan node types
-(defrecord Query [projections selection])
+(defrecord Query [fields base])
 (defrecord AndExpression [clauses])
 (defrecord BinaryExpression [operator column value])
-(defrecord FromExpression [projections subquery where])
+(defrecord FromExpression [fields subquery where])
 (defrecord InExpression [column subquery])
 (defrecord NotExpression [clause])
 (defrecord OrExpression [clauses])
@@ -60,7 +60,7 @@
 
             [[:field field]]
             (let [context (:context (meta node))
-                  qualified-field (-> schema context :projections field :field)]
+                  qualified-field (-> schema context :fields field :field)]
               (map->FieldExpression
                 {:projection qualified-field}))
 
@@ -94,18 +94,18 @@
                :offset offset})
 
             [[:from (entity :guard keyword?) [:extract columns & expr]]]
-            (let [{:keys [selection] :as query-rec} (get schema entity)]
+            (let [{:keys [base] :as query-rec} (get schema entity)]
               (map->FromExpression
-                {:projections (mapv (partial node->plan schema) columns)
-                 :subquery selection
+                {:fields (mapv (partial node->plan schema) columns)
+                 :subquery base
                  :where (some->> (first expr)
                                  (node->plan schema))}))
 
             [[:from (entity :guard keyword?) expr]]
-            (let [{:keys [selection projections]} (get schema entity)]
+            (let [{:keys [base fields]} (get schema entity)]
               (map->FromExpression
-                {:projections (mapv :field (vals projections))
-                 :subquery selection
+                {:fields (mapv :field (vals fields))
+                 :subquery base
                  :where (when (not-empty expr)
                           (node->plan schema expr))}))
 
@@ -163,8 +163,8 @@
     [operator (-plan->hsql column) (cond-> value (keyword? value) name)])
 
   FromExpression
-  (-plan->hsql [{:keys [projections subquery where]}]
-    (-> {:select (mapv -plan->hsql projections)
+  (-plan->hsql [{:keys [fields subquery where]}]
+    (-> {:select (mapv -plan->hsql fields)
          :from [(:from subquery)]}
         (cond-> where (assoc :where (-plan->hsql where)))))
 

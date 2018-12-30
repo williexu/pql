@@ -4,16 +4,16 @@
 
 
 (def test-schema
-  {:people {:projections {:name {:type :string
+  {:people {:fields {:name {:type :string
                                  :field :people.name}
                           :age {:type :number
                                 :field :people.age}}
-            :selection {:from :people}}
-   :pets {:projections {:name {:type :string
+            :base {:from :people}}
+   :pets {:fields {:name {:type :string
                                :field :pets.name}
                         :owner {:type :string
                                 :field :pets.owner}}
-          :selection {:from :pets}}})
+          :base {:from :pets}}})
 
 (deftest test-engine
   (are [input expected] (= expected (query->sql test-schema input))
