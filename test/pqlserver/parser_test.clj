@@ -135,6 +135,11 @@
 
        "people [name] {name.foo is not null group by name, age}"
        [:group-by [:from :people [:extract [[:field :name]] [:null? [:json-query :name :foo] false]]] [[:field :name] [:field :age]]]
+
        "people [name] {name.foo.bar is not null group by name, age}"
        [:group-by [:from :people [:extract [[:field :name]] [:null? [:json-query :name :foo :bar] false]]] [[:field :name] [:field :age]]]
+
+       "people [name] {name.foo.bar = 'baz' group by name, age}"
+       [:group-by [:from :people [:extract [[:field :name]] [:= [:json-query :name :foo :bar] "baz"]]]
+        [[:field :name] [:field :age]]]
        ))

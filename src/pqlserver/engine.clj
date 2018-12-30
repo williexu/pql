@@ -104,7 +104,7 @@
             [[:from (entity :guard keyword?) expr]]
             (let [{:keys [base fields]} (get schema entity)]
               (map->FromExpression
-                {:fields (mapv :field (vals fields))
+                {:fields (sort (mapv :field (vals fields)))
                  :subquery base
                  :where (when (not-empty expr)
                           (node->plan schema expr))}))
