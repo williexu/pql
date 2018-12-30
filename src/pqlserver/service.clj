@@ -36,7 +36,7 @@
                  :config
                  :database
                  (pooler/make-datasource))
-        jetty-opts (-> opts :config :webserver)
+        {:keys [port] :as jetty-opts} (-> opts :config :webserver)
         spec (:spec opts)
         routes (handler/make-routes pool spec)]
 

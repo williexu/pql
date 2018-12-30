@@ -47,7 +47,7 @@
                 (async/alt!!
                   [kill?]
                   ([v _]
-                   (log/infof "Result stream received signal %s; closing" v)
+                   (log/debugf "Result stream received signal %s; closing" v)
                    (throw (Exception.)))
                   [[result-chan record]]
                   ([_ _])))
