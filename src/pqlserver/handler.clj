@@ -35,21 +35,18 @@
                           pql->ast
                           (query->sql schema))
                  result-chan (async/chan)
+                 kill? (async/chan)
+                 cancel-fn #(async/>!! kill? ::cancel)
                  ;; Execute the query in a future, writing records to
                  ;; result-chan. In the main thread, lazily pull records off
                  ;; the channel, format them to json, and write to a
                  ;; piped-input-stream (via streamed-response). Although we do
-                 ;; not track the state of the future, we know it can resolve
-                 ;; in two ways: if streamed-response fully consumes
-                 ;; result-seq, then the associated resultset will be consumed
-                 ;; and the thread will be freed. Alternatively, if
-                 ;; streamed-response throws an exception, HikariCP will
-                 ;; steal back the database connection after a period of
-                 ;; inactivity, again allowing query->chan to exit and freeing
-                 ;; the thread.
-                 _ (future (query->chan sql result-chan))
+                 ;; not track the state of the future, we know that it has
+                 ;; finished its work when result-seq is fully consumed.
+                 _ (future (query->chan sql result-chan kill?))
                  result-seq (chan-seq!! result-chan)]
              (streamed-response buf
+                                cancel-fn
                                 (-> result-seq
                                     (json/generate-stream buf {:pretty true})
                                     json-response))))
