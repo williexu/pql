@@ -2,7 +2,7 @@
   (:require [hikari-cp.core :as hk]
             [clojure.java.jdbc :as jdbc]))
 
-(def datasource-options
+(def default-opts
   {:auto-commit false
    :read-only true
    :connection-timeout 30000
@@ -14,5 +14,7 @@
    :adapter "postgresql"
    :database-name "foo"})
 
-(defonce datasource
-  (delay (hk/make-datasource datasource-options)))
+(defn make-datasource [opts]
+  (->> opts
+       (merge default-opts)
+       hk/make-datasource))

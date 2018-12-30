@@ -3,7 +3,6 @@
   (:require [clojure.java.io :as io]
             [clojure.tools.logging :as log]
             [clojure.core.async :as async]
-            [pqlserver.pooler :refer [datasource]]
             [clojure.java.jdbc :as jdbc]
             [ring.util.io :refer [piped-input-stream]])
   (:import [java.io IOException]))
@@ -41,8 +40,8 @@
 
    I'm not sure about the performance overhead of doing this on channels, but
    it seems quick enough to me at the moment."
-  [query result-chan kill?]
-  (jdbc/with-db-connection [conn {:datasource @datasource}]
+  [pool query result-chan kill?]
+  (jdbc/with-db-connection [conn {:datasource pool}]
     (try
       (reduce (fn [_ record]
                 (async/alt!!

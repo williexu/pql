@@ -1,0 +1,6 @@
+---
+database:
+  jdbc-url: postgres:///foo
+
+webserver:
+  port: 3000

@@ -6,8 +6,7 @@
             [pqlserver.engine :refer [query->sql]]
             [pqlserver.http :refer [streamed-response query->chan chan-seq!!]]
             [pqlserver.parser :refer [pql->ast]]
-            [ring.middleware.defaults :refer [wrap-defaults api-defaults]]))
-            [ring.util.response :as rr]
+            [ring.util.response :as rr]))
 
 (defn json-response
   "Produce a json ring response"
@@ -19,33 +18,31 @@
       (rr/content-type "application/json; charset=utf-8")
       (rr/status code))))
 
-(def app-routes
-  (let [schema (clojure.edn/read-string (slurp (clojure.java.io/resource "schema.edn")))]
-    (routes
-      (GET "/" [] "Hello World")
-      (GET "/query" [query]
-           (let [sql (->> query
-                          pql->ast
-                          (query->sql schema))
-                 result-chan (async/chan)
-                 kill? (async/chan)
-                 cancel-fn #(async/>!! kill? ::cancel)
-                 ;; Execute the query in a future, writing records to
-                 ;; result-chan. In the main thread, lazily pull records off
-                 ;; the channel, format them to json, and write to a
-                 ;; piped-input-stream (via streamed-response). Although we do
-                 ;; not track the state of the future, we know that it has
-                 ;; finished its work when result-seq is fully consumed.
-                 _ (future (query->chan sql result-chan kill?))
-                 result-seq (chan-seq!! result-chan)]
-             (streamed-response buf
-                                cancel-fn
-                                (-> result-seq
-                                    (json/generate-stream buf {:pretty true})
-                                    json-response))))
-      (GET "/schema" []
-           (-> schema
-               json-response))
-      (route/not-found "Not Found"))))
-
-(def app (wrap-defaults app-routes api-defaults))
+(defn make-routes
+  [pool api-spec]
+  (routes
+    (GET "/" [] "Hello World")
+    (GET "/query" [query]
+         (let [sql (->> query
+                        pql->ast
+                        (query->sql api-spec))
+               result-chan (async/chan)
+               kill? (async/chan)
+               cancel-fn #(async/>!! kill? ::cancel)
+               ;; Execute the query in a future, writing records to
+               ;; result-chan. In the main thread, lazily pull records off
+               ;; the channel, format them to json, and write to a
+               ;; piped-input-stream (via streamed-response). Although we do
+               ;; not track the state of the future, we know that it has
+               ;; finished its work when result-seq is fully consumed.
+               _ (future (query->chan pool sql result-chan kill?))
+               result-seq (chan-seq!! result-chan)]
+           (streamed-response buf
+                              cancel-fn
+                              (-> result-seq
+                                  (json/generate-stream buf {:pretty true})
+                                  json-response))))
+    (GET "/schema" []
+         (-> api-spec
+             json-response))
+    (route/not-found "Not Found")))

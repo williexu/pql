@@ -1,0 +1,13 @@
+{:people
+ {:projections
+  {:json {:type "jsonb", :field :people.json},
+   :name {:type :string, :field :people.name},
+   :a {:type "ARRAY", :field :people.a},
+   :under_scored {:type :string, :field :people.under_scored},
+   :age {:type "integer", :field :people.age}},
+  :selection {:from :people}},
+ :pets
+ {:projections
+  {:name {:type :string, :field :pets.name},
+   :owner {:type :string, :field :pets.owner}},
+  :selection {:from :pets}}}
