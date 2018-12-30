@@ -1,20 +1,13 @@
 (ns pqlserver.handler
-  (:require [compojure.core :refer :all]
-            [clojure.tools.nrepl.server :refer [start-server]]
+  (:require [cheshire.core :as json]
             [clojure.core.async :as async]
-            [cheshire.core :as json]
-            [cheshire.generate :refer [add-encoder encode-map encode-seq]]
-            [clojure.tools.logging :as log]
+            [compojure.core :refer :all]
             [compojure.route :as route]
-            [pqlserver.parser :refer [pql->ast]]
             [pqlserver.engine :refer [query->sql]]
             [pqlserver.http :refer [streamed-response query->chan chan-seq!!]]
-            [pqlserver.json :as pql-json]
+            [pqlserver.parser :refer [pql->ast]]
+            [ring.middleware.defaults :refer [wrap-defaults api-defaults]]))
             [ring.util.response :as rr]
-            [ring.middleware.defaults :refer [wrap-defaults api-defaults]])
-  (:import [java.io IOException]))
-
-(defonce nrepl-server (start-server :port 8002))
 
 (defn json-response
   "Produce a json ring response"
@@ -55,6 +48,4 @@
                json-response))
       (route/not-found "Not Found"))))
 
-(def app
-  (do (pql-json/add-common-json-encoders!)
-      (wrap-defaults app-routes api-defaults)))
+(def app (wrap-defaults app-routes api-defaults))

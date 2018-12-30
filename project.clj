@@ -18,9 +18,11 @@
                  [org.postgresql/postgresql "42.2.2"]
                  [prismatic/schema "1.1.9"]
                  [org.clojure/tools.logging "0.4.1"]
+                 [ring/ring-core "1.6.3"]
+                 [ring/ring-jetty-adapter "1.6.3"]
                  [ring/ring-defaults "0.3.2"]]
   :plugins [[lein-ring "0.12.4"]]
-  :ring {:handler pqlserver.handler/app}
+  :main pqlserver.service
   :profiles
   {:dev {:dependencies [[javax.servlet/servlet-api "2.5"]
                         [ring/ring-mock "0.3.2"]]}})
