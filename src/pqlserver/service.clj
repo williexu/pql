@@ -6,8 +6,10 @@
             [pqlserver.json :as pql-json]
             [pqlserver.pooler :as pooler]
             [pqlserver.schema :as schema]
+            [puppetlabs.trapperkeeper.logging :refer [configure-logging!]]
             [ring.adapter.jetty :refer [run-jetty]]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
+            [ring.logger :as ring-logger]
             [pqlserver.handler :as handler])
   (:gen-class))
 
@@ -45,13 +47,20 @@
                  :database
                  (pooler/make-datasource))
         {:keys [port] :as jetty-opts} (-> opts :config :webserver)
+        {:keys [logging-config]
+         :or {logging-config
+              (clojure.java.io/resource "logback.xml")}} (-> opts :config :service)
         spec (:spec opts)
-        routes (handler/make-routes pool spec)]
+        routes (handler/make-routes pool spec)
+        ring-logging-opts {:log-level :info
+                           :request-keys [:request-method :uri :remote-addr]}]
+    (configure-logging! logging-config)
     (if (:generate-spec opts)
       (do (schema/print-schema pool)
           (System/exit 0))
       (do (pql-json/add-common-json-encoders!)
           (log/infof "Serving on port %d" port)
           (-> routes
+              (ring-logger/wrap-log-request-params ring-logging-opts)
               (wrap-defaults api-defaults)
               (run-jetty jetty-opts))))))
