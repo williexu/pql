@@ -1,6 +1,10 @@
 ---
 database:
-  jdbc-url: postgres:///foo
+  server-name: localhost
+  database-name: pqlserver
+  port-number: 5432
+  username: pqlserver
+  password: pqlserver
 
 webserver:
   port: 3000

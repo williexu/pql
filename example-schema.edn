@@ -1,13 +1,13 @@
 {:people
- {:projections
-  {:json {:type "jsonb", :field :people.json},
+ {:fields
+  {:street_address {:type :string, :field :people.street_address},
+   :age {:type :number, :field :people.age},
    :name {:type :string, :field :people.name},
-   :a {:type "ARRAY", :field :people.a},
-   :under_scored {:type :string, :field :people.under_scored},
-   :age {:type "integer", :field :people.age}},
-  :selection {:from :people}},
+   :siblings {:type :array, :field :people.siblings},
+   :attributes {:type :object, :field :people.attributes}},
+  :base {:from :people}},
  :pets
- {:projections
-  {:name {:type :string, :field :pets.name},
-   :owner {:type :string, :field :pets.owner}},
-  :selection {:from :pets}}}
+ {:fields
+  {:owner {:type :string, :field :pets.owner},
+   :name {:type :string, :field :pets.name}},
+  :base {:from :pets}}}

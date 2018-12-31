@@ -25,11 +25,11 @@
 
 (defn get-schema [db]
   (->> (jdbc/query db "select table_name, column_name, data_type from
-                      information_schema.columns where table_schema = 'public'")
+                       information_schema.columns where table_schema = 'public'")
        (reduce form-spec {})))
 
 (defn print-schema
   [pool]
-  (jdbc/with-db-connection [db {:datasource pool}]
+  (jdbc/with-db-transaction [db {:datasource pool}]
     (->> (get-schema db)
          pp/pprint)))

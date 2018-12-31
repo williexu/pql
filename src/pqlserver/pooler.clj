@@ -11,8 +11,7 @@
    :max-lifetime 1800000
    :maximum-pool-size 25
    :pool-name "db-pool"
-   :adapter "postgresql"
-   :database-name "foo"})
+   :adapter "postgresql"})
 
 (defn make-datasource [opts]
   (->> opts

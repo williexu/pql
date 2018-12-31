@@ -8,7 +8,8 @@
             [pqlserver.schema :as schema]
             [ring.adapter.jetty :refer [run-jetty]]
             [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
-            [pqlserver.handler :as handler]))
+            [pqlserver.handler :as handler])
+  (:gen-class))
 
 (def cli-options
   [["-c" "--config CONFIG" "Configuration file"
