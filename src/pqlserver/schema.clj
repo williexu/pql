@@ -26,7 +26,8 @@
 (defn get-schema [db]
   (->> (jdbc/query db "select table_name, column_name, data_type from
                        information_schema.columns where table_schema = 'public'")
-       (reduce form-spec {})))
+       (reduce form-spec {})
+       (assoc {} :v1)))
 
 (defn print-schema
   [pool]

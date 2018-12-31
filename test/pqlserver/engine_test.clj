@@ -11,7 +11,7 @@
 (deftest test-engine
   (let [schema (get-schema test-db-spec)]
     (are [input expected]
-         (let [sql (query->sql schema input)]
+         (let [sql (query->sql schema :v1 input)]
            (testing "SQL is as expected"
              (= expected sql))
            (testing (format "generated SQL is valid\n%s" sql)

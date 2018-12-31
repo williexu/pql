@@ -7,7 +7,7 @@ the Puppet-specific aspects.
 
 Use the built-in API schema generator to create an API for your database in
 moments. If desired, edit the generated schema to better reflect your data
-model, for instance if your database is substantially normalized, or has an
+model, for instance if your database is substantially normalized or has an
 otherwise loose mapping from tables to public entities.
 
 ## Demonstration
@@ -287,7 +287,7 @@ database. To start, copy the file `example-config.yaml` to `config.yaml`, and
 edit it to suit your needs. Once you have it configured to point at the
 appropriate database, generate the API spec with
 
-    lein run -c config.yaml --generate > spec.edn
+    lein run -c config.yaml --generate-spec > spec.edn
 
 After this runs, you can start the server with
 
@@ -306,6 +306,18 @@ The resulting artifact can then be run with,
 Note that the version number of the artifact may be different, and that setting
 the heap size is not strictly required. If not set, it will use the JVM default
 of 1/4 system RAM.
+
+
+## Administration
+
+### API Versioning
+Consumers may find need to make breaking API changes. The pqlserver API
+specification format supports multiple specs, and nests them under version keys
+like :v1, which is the default for generated specs. Client tools provide
+mechanisms to select an API version from those available. If you need to make
+breaking changes, the typical workflow would be to duplicate your existing
+schema, modulo motivating specification changes, under an incremented version
+key. Deprecation and/or retirement policies are of course your business.
 
 ## License
 

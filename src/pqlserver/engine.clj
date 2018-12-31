@@ -244,11 +244,11 @@
          :state ctx}))))
 
 (defn query->sql
-  [schema query]
+  [schema version query]
   (let [annotated-query (-> (z/vector-zip query)
                             (zv/visit nil [update-meta fill-meta])
                             :node)]
     (->> annotated-query
-         (node->plan schema)
+         (node->plan (version schema))
          plan->hsql
          hc/format)))

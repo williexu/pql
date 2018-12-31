@@ -18,18 +18,18 @@
    ["-s" "--spec SPEC" "API specification"
     :default nil
     :parse-fn #(-> % slurp clojure.edn/read-string)]
-   ["-g" "--generate" "Generate an API specification to stdout"]])
+   ["-g" "--generate-spec" "Generate an API specification to stdout"]])
 
 (defn validate-opts
   [opts]
   (when-not (:config opts)
     (println "Specify a config file with -c or --config")
     (System/exit 1))
-  (when-not (or (:generate opts) (:spec opts))
-    (println "Indicate a specification file with --spec, or generate one with --generate")
+  (when-not (or (:generate-spec opts) (:spec opts))
+    (println "Indicate a specification file with --spec, or generate one with --generate-spec")
     (System/exit 1))
-  (when (and (:generate opts) (:spec opts))
-    (println "--generate and --spec are mutually exclusive")
+  (when (and (:generate-spec opts) (:spec opts))
+    (println "--generate-spec and --spec are mutually exclusive")
     (System/exit 1))
 
   ;; config is valid
@@ -47,7 +47,7 @@
         {:keys [port] :as jetty-opts} (-> opts :config :webserver)
         spec (:spec opts)
         routes (handler/make-routes pool spec)]
-    (if (:generate opts)
+    (if (:generate-spec opts)
       (do (schema/print-schema pool)
           (System/exit 0))
       (do (pql-json/add-common-json-encoders!)

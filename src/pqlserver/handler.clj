@@ -22,10 +22,11 @@
   [pool api-spec]
   (routes
     (GET "/" [] "Hello World")
-    (GET "/query" [query]
-         (let [sql (->> query
+    (GET "/query/:version" [query version]
+         (let [version-kwd (keyword version)
+               sql (->> query
                         pql->ast
-                        (query->sql api-spec))
+                        (query->sql api-spec version-kwd))
                result-chan (async/chan)
                kill? (async/chan)
                cancel-fn #(async/>!! kill? ::cancel)
@@ -34,7 +35,8 @@
                ;; the channel, format them to json, and write to a
                ;; piped-input-stream (via streamed-response). Although we do
                ;; not track the state of the future, we know that it has
-               ;; finished its work when result-seq is fully consumed.
+               ;; finished its work when result-seq is fully consumed, which
+               ;; blocks this function's exit.
                _ (future (query->chan pool sql result-chan kill?))
                result-seq (chan-seq!! result-chan)]
            (streamed-response buf
@@ -42,7 +44,8 @@
                               (-> result-seq
                                   (json/generate-stream buf {:pretty true})
                                   json-response))))
-    (GET "/schema" []
+    (GET "/describe" []
          (-> api-spec
+             (json/generate-string {:pretty true})
              json-response))
     (route/not-found "Not Found")))
