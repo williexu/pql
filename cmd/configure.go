@@ -2,15 +2,14 @@ package cmd
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 
-	"github.com/docker/docker/pkg/homedir"
 	"github.com/spf13/cobra"
-	"github.com/wkalt/pql/config"
-	yaml "gopkg.in/yaml.v2"
+	"github.com/wkalt/pql/client"
 )
 
 var configureCmd = &cobra.Command{
@@ -25,32 +24,37 @@ var configureCmd = &cobra.Command{
 			log.Fatal("Error reading input:", err)
 		}
 
-		c := config.Config{
-			Server: config.Server{
-				URL: strings.TrimRight(url, "\n"),
-			},
+		serverURL := strings.TrimRight(url, "\n")
+
+		client := client.Client{
+			URL: serverURL,
 		}
 
-		data, err := yaml.Marshal(&c)
+		m := make(map[string]interface{})
+
+		err = json.Unmarshal(client.Describe(), &m)
 		if err != nil {
-			log.Fatal("Error marshaling config data:", err)
+			log.Fatal("Error gathering API spec:", err)
 		}
 
-		home := homedir.Get()
-
-		confFile := fmt.Sprintf("%s/.pqlrc", home)
-
-		f, err := os.Create(confFile)
-		if err != nil {
-			log.Fatal(fmt.Sprintf("Error opening config file %s: %s", confFile, err))
+		availableVersions := []string{}
+		for k := range m {
+			availableVersions = append(availableVersions, k)
 		}
 
-		_, err = f.Write(data)
-		if err != nil {
-			log.Fatal("Error writing config file:", err)
+		if len(availableVersions) == 1 {
+			fmt.Println(fmt.Sprintf("Using API version %s", availableVersions[0]))
+			client.APIVersion = availableVersions[0]
+		} else {
+			fmt.Println(fmt.Sprintf("Select a version: %v", availableVersions))
+			version, err := reader.ReadString('\n')
+			if err != nil {
+				log.Fatal("Error reading input:", err)
+			}
+			client.APIVersion = strings.TrimRight(version, "\n")
 		}
 
-		fmt.Println("Created ~/.pqlrc")
+		client.WriteConfig()
 	},
 }
 
