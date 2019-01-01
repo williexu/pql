@@ -22,7 +22,10 @@
                  [org.clojure/tools.logging "0.4.1"]
                  [ring/ring-core "1.6.3"]
                  [ring/ring-jetty-adapter "1.6.3"]
-                 [ring/ring-defaults "0.3.2"]]
+                 [ring/ring-defaults "0.3.2"]
+                 [metrics-clojure "2.10.0"]
+                 [metrics-clojure-ring "2.10.0"]
+                 [metrics-clojure-jvm "2.10.0"]]
   :plugins [[lein-ring "0.12.4"]]
   :main pqlserver.service
   :profiles

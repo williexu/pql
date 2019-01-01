@@ -319,6 +319,26 @@ breaking changes, the typical workflow would be to duplicate your existing
 schema, modulo motivating specification changes, under an incremented version
 key. Deprecation and/or retirement policies are of course your business.
 
+### Metrics
+The service has a `/metrics` endpoint with detailed information about the state
+of the JVM and request counts/timings/etc. You can access it with curl, e.g
+
+    curl -X GET http://localhost:3000/metrics
+
+See [this gist](https://gist.github.com/wkalt/808d414f6e08aeea9355b246608b8bb0)
+for an example of what you get.
+
+These metrics can also be exposed over JMX with the right choice of java args.
+An insecure example is
+
+    java -Dcom.sun.management.jmxremote \
+    -Dcom.sun.management.jmxremote.port=1099 \
+    -Dcom.sun.management.jmxremote.ssl=false
+    -Djava.rmi.server.hostname=localhost \
+    -Dcom.sun.management.jmxremote.local.only=false \
+    -Dcom.sun.management.jmxremote.authenticate=false \
+    -jar target/pqlserver-0.1.0-SNAPSHOT-standalone.jar -c config.yaml -s spec.edn
+
 ## License
 
 Copyright © 2018 Wyatt Alt
