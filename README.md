@@ -307,6 +307,9 @@ Note that the version number of the artifact may be different, and that setting
 the heap size is not strictly required. If not set, it will use the JVM default
 of 1/4 system RAM.
 
+## Additional tooling
+* CLI client: https://github.com/wkalt/pql
+* Python client library: https://github.com/wkalt/pqlpy
 
 ## Administration
 
