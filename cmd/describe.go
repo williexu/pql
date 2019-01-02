@@ -10,7 +10,7 @@ import (
 // describeCmd represents the describe command
 var describeCmd = &cobra.Command{
 	Use:   "describe",
-	Short: "print a description of the configured API",
+	Short: "Print a description of the configured API",
 	Long: `Print a description of the configured API. For example,
 	pql describe
 	`,
