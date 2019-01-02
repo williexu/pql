@@ -11,6 +11,9 @@
    "array" :array
    "varchar" :string
    "boolean" :boolean
+   "timestamp" :timestamp
+   "timestamp with time zone" :timestamp
+   "timestamp without time zone" :timestamp
    "double precision" :number})
 
 (defn form-spec

@@ -10,6 +10,8 @@
    database backends."
   (:require [clojure.core.match :as cm]
             [clojure.string :as str]
+            [clj-time.core :as t]
+            [clj-time.coerce :as c]
             [zip.visit :as zv]
             [clojure.zip :as z]
             [honeysql.core :as hc]
@@ -20,6 +22,9 @@
 
 (defmethod hf/fn-handler "~*" [_ field pattern]
   (str (hf/to-sql field) " ~* " (hf/to-sql pattern)))
+
+(def value-mungers
+  {:timestamp c/to-timestamp})
 
 (def binary-op?
   #{:= :< :<= :> :>= (keyword "~") (keyword "~*")})
@@ -39,7 +44,7 @@
 (defrecord OrderByExpression [subquery orderings])
 (defrecord OrderExpression [field direction])
 (defrecord GroupByExpression [subquery groupings])
-(defrecord FieldExpression [projection])
+(defrecord FieldExpression [field])
 (defrecord FnExpression [function args])
 (defrecord JsonQueryExpression [path])
 
@@ -60,9 +65,9 @@
 
             [[:field field]]
             (let [context (:context (meta node))
-                  qualified-field (-> schema context :fields field :field)]
+                  contextualized-field (-> schema context :fields field)]
               (map->FieldExpression
-                {:projection qualified-field}))
+                {:field contextualized-field}))
 
             [[:json-query & path]]
             (map->JsonQueryExpression
@@ -160,7 +165,9 @@
 
   BinaryExpression
   (-plan->hsql [{:keys [column operator value]}]
-    [operator (-plan->hsql column) (cond-> value (keyword? value) name)])
+    (let [column-type (-> column :field :type)
+          munge-fn (get value-mungers column-type identity)]
+      [operator (-plan->hsql column) (munge-fn value)]))
 
   FromExpression
   (-plan->hsql [{:keys [fields subquery where]}]
@@ -179,8 +186,8 @@
      (-plan->hsql subquery)])
 
   FieldExpression
-  (-plan->hsql [{:keys [projection]}]
-    projection)
+  (-plan->hsql [{:keys [field]}]
+    (:field field))
 
   JsonQueryExpression
   (-plan->hsql [{:keys [path]}]

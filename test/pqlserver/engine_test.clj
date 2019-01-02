@@ -19,41 +19,41 @@
          [:from :people []]
          ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people"]
 
-         [:from :people [:= [:field :name] :susan]]
+         [:from :people [:= [:field :name] "susan"]]
          ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name = ?" "susan"]
 
-         [:from :people [:and [:= [:field :name] :susan] [:> [:field :age] 30]]]
+         [:from :people [:and [:= [:field :name] "susan"] [:> [:field :age] 30]]]
          ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE (people.name = ? AND people.age > ?)" "susan" 30]
 
-         [:from :people [:or [:= [:field :name] :susan] [:> [:field :age] 30]]]
+         [:from :people [:or [:= [:field :name] "susan"] [:> [:field :age] 30]]]
          ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE (people.name = ? OR people.age > ?)" "susan" 30]
 
-         [:from :people [:or [:= [:field :name] :susan] [:and [:> [:field :age] 30] [:< [:field :age] 100]]]]
+         [:from :people [:or [:= [:field :name] "susan"] [:and [:> [:field :age] 30] [:< [:field :age] 100]]]]
          ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE (people.name = ? OR (people.age > ? AND people.age < ?))" "susan" 30 100]
 
-         [:from :people [:not [:= [:field :name] :susan]]]
+         [:from :people [:not [:= [:field :name] "susan"]]]
          ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE NOT people.name = ?" "susan"]
 
-         [:from :people [(keyword "~") [:field :name] :susan]]
+         [:from :people [(keyword "~") [:field :name] "susan"]]
          ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name ~ ?" "susan"]
 
-         [:from :people [:not [(keyword "~") [:field :name] :susan]]]
+         [:from :people [:not [(keyword "~") [:field :name] "susan"]]]
          ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE NOT people.name ~ ?" "susan"]
 
-         [:from :people [:not [(keyword "~*") [:field :name] :susan]]]
+         [:from :people [:not [(keyword "~*") [:field :name] "susan"]]]
          ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE NOT people.name ~* ?" "susan"]
 
-         [:from :people [:extract [[:field :name]] [:not [(keyword "~*") [:field :name] :susan]]]]
+         [:from :people [:extract [[:field :name]] [:not [(keyword "~*") [:field :name] "susan"]]]]
          ["SELECT people.name FROM people WHERE NOT people.name ~* ?" "susan"]
 
-         [:from :people [:extract [[:field :name] [:field :age]] [:not [(keyword "~*") [:field :name] :susan]]]]
+         [:from :people [:extract [[:field :name] [:field :age]] [:not [(keyword "~*") [:field :name] "susan"]]]]
          ["SELECT people.name, people.age FROM people WHERE NOT people.name ~* ?" "susan"]
 
          [:from :people [:extract [[:field :name] [:field :age]]
-                         [:in [:field :name] [:from :pets [:extract [[:field :name]] [:= [:field :owner] :foobar]]]]]]
+                         [:in [:field :name] [:from :pets [:extract [[:field :name]] [:= [:field :owner] "foobar"]]]]]]
          ["SELECT people.name, people.age FROM people WHERE (people.name in (SELECT pets.name FROM pets WHERE pets.owner = ?))" "foobar"]
 
-         [:from :people [:in [:field :name] [:from :pets [:extract [[:field :name]] [:= [:field :owner] :foobar]]]]]
+         [:from :people [:in [:field :name] [:from :pets [:extract [[:field :name]] [:= [:field :owner] "foobar"]]]]]
          ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE (people.name in (SELECT pets.name FROM pets WHERE pets.owner = ?))" "foobar"]
 
          [:from :people [:null? [:field :name] true]]
