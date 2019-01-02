@@ -1,6 +1,5 @@
 (ns pqlserver.schema
   (:require [clojure.java.jdbc :as jdbc]
-            [clojure.pprint :as pp]
             [clojure.string :as str]))
 
 ;; Mapping from postgres types to json types
@@ -31,9 +30,3 @@
                        information_schema.columns where table_schema = 'public'")
        (reduce form-spec {})
        (assoc {} :v1)))
-
-(defn print-schema
-  [pool]
-  (jdbc/with-db-transaction [db {:datasource pool}]
-    (->> (get-schema db)
-         pp/pprint)))

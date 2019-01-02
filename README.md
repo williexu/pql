@@ -1,6 +1,6 @@
 # pqlserver
 
-`pqlserver` is a generic API server. It is inspired by the PuppetDB query API,
+`pqlserver` is a generic API server. It is inspired by the PuppetDB query API
 and implements a query language very close to
 [PQL](https://puppet.com/docs/puppetdb/5.1/api/query/v4/pql.html), with none of
 the Puppet-specific aspects.
@@ -287,7 +287,7 @@ database. To start, copy the file `example-config.yaml` to `config.yaml`, and
 edit it to suit your needs. Once you have it configured to point at the
 appropriate database, generate the API spec with
 
-    lein run -c config.yaml --generate-spec > spec.edn
+    lein run -c config.yaml --generate-spec spec.edn
 
 After this runs, you can start the server with
 
