@@ -1,7 +1,8 @@
 package cmd
 
 import (
-	"log"
+	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/wkalt/pql/client"
@@ -16,10 +17,11 @@ pql query "people { name ~ 'foo' and age > 30 }"
 pql query "people { name ~ 'foo' and age > 30 limit 100}"`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		query := args[0]
-		if query == "" {
-			log.Fatal("Supply a query")
+		if len(args) == 0 {
+			fmt.Println("Supply a query")
+			os.Exit(1)
 		}
+		query := args[0]
 		c := client.NewClient()
 		c.Query(query)
 	},
