@@ -65,7 +65,14 @@
 
             [[:field field]]
             (let [context (:context (meta node))
-                  contextualized-field (-> schema context :fields field)]
+                  available-fields (-> schema context :fields)
+                  contextualized-field (field available-fields)]
+              (when-not contextualized-field
+                (throw (Exception.
+                         (format "Invalid field '%s'. Available fields for '%s': %s"
+                                 (name field)
+                                 (name context)
+                                 (mapv name (keys available-fields))))))
               (map->FieldExpression
                 {:field contextualized-field}))
 
