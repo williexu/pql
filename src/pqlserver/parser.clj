@@ -190,4 +190,7 @@
 
 (defn pql->ast
   [pql]
-  (-> pql parse transform first))
+  (let [ast (-> pql parse transform)]
+    (if (insta/failure? ast)
+      (throw (Exception. (print-str (insta/get-failure ast))))
+      (first ast))))
