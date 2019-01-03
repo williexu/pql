@@ -33,6 +33,33 @@ func (c *Client) Describe() []byte {
 	return body
 }
 
+func (c *Client) Plan(pql string) {
+	url := fmt.Sprintf("%s/plan/%s", c.URL, c.APIVersion)
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Fatalf("Error making GET request to %s: %s", url, err)
+	}
+	params := req.URL.Query()
+	params.Add("query", pql)
+	req.URL.RawQuery = params.Encode()
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalf("Error making GET request to %s: %s", url, err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal("Error reading response body:", err)
+	}
+	switch {
+	case resp.StatusCode >= 500:
+		log.Fatal("Server error:", string(body))
+	case resp.StatusCode == 200:
+		fmt.Println(string(body))
+	}
+}
+
 // Query the PQL server
 func (c *Client) Query(pql string) {
 	url := fmt.Sprintf("%s/query/%s", c.URL, c.APIVersion)
