@@ -50,6 +50,15 @@
    :dbname (:database-name cfg)
    :host (:server-name cfg)})
 
+(defn start-server [pool spec logging-opts jetty-opts]
+  (log/infof "Serving on port %d" (:port jetty-opts))
+  (-> (handler/make-routes pool spec)
+      (ring-logger/wrap-log-request-params logging-opts)
+      (wrap-defaults api-defaults)
+      expose-metrics-as-json
+      (instrument-by uri-prefix)
+      (run-jetty jetty-opts)))
+
 (defn -main [& args]
   (let [opts (-> (cli/parse-opts args cli-options)
                  :options
@@ -69,22 +78,16 @@
                    (pooler/make-datasource))
           {:keys [port] :as jetty-opts} (-> opts :config :webserver)
           spec (:spec opts)
-          ring-logging-opts {:log-level :info
-                             :request-keys [:request-method :uri :remote-addr]}
+          logging-opts {:log-level :info
+                        :request-keys [:request-method :uri :remote-addr]}
           {:keys [logging-config]
            :or {logging-config
                 (clojure.java.io/resource "logback.xml")}} (-> opts
                                                                :config
                                                                :service)]
       (nrepl/start-server :port 8002)
-      ;(configure-logging! logging-config)
+      (configure-logging! logging-config)
       (instrument-jvm default-registry)
       (pql-json/add-common-json-encoders!)
       (jmx/start (jmx/reporter default-registry {}))
-      (log/infof "Serving on port %d" port)
-      (-> (handler/make-routes pool spec)
-          (ring-logger/wrap-log-request-params ring-logging-opts)
-          (wrap-defaults api-defaults)
-          expose-metrics-as-json
-          (instrument-by uri-prefix)
-          (run-jetty jetty-opts)))))
+      (start-server pool spec logging-opts jetty-opts))))
