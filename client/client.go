@@ -53,9 +53,10 @@ func (c *Client) Plan(pql string) {
 		log.Fatal("Error reading response body:", err)
 	}
 	switch {
-	case resp.StatusCode >= 500:
-		log.Fatal("Server error:", string(body))
-	case resp.StatusCode == 200:
+	case resp.StatusCode != 200:
+		fmt.Println(string(body))
+		os.Exit(1)
+	default:
 		fmt.Println(string(body))
 	}
 }
@@ -86,7 +87,16 @@ func (c *Client) Query(pql string) {
 		if err != nil {
 			log.Fatal("Error reading 500 response body:", err)
 		}
-		log.Fatal("Server error:", string(body))
+		fmt.Println("Server error:", string(body))
+		os.Exit(1)
+
+	case resp.StatusCode >= 400:
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Fatal("Error reading 400 response body:", err)
+		}
+		fmt.Println(string(body))
+		os.Exit(1)
 
 	case resp.StatusCode == 200:
 		stdout := bufio.NewWriter(os.Stdout)
