@@ -93,6 +93,8 @@ func (c *Client) Query(pql string) {
 		defer stdout.Flush()
 		buf := bufio.NewReader(resp.Body)
 		buf.WriteTo(stdout)
+		stdout.WriteString("\n")
+		stdout.Flush()
 	}
 }
 
