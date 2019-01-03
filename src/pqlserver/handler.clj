@@ -4,7 +4,7 @@
             [compojure.core :refer :all]
             [compojure.route :as route]
             [pqlserver.engine :refer [query->sql]]
-            [pqlserver.http :refer [streamed-response query->chan chan-seq!!]]
+            [pqlserver.http :refer [streamed-response query->chan chan-seq!! query]]
             [pqlserver.parser :refer [pql->ast]]
             [ring.util.response :as rr]))
 
@@ -44,6 +44,14 @@
                               (-> result-seq
                                   (json/generate-stream buf {:pretty true})
                                   json-response))))
+    (GET "/plan/:version" [query version explain]
+         (let [version-kwd (keyword version)
+               sql (->> query
+                        pql->ast
+                        (query->sql api-spec version-kwd))]
+           (-> {:query (first sql) :parameters (rest sql)}
+               (json/generate-string {:pretty true})
+               json-response)))
     (GET "/describe" []
          (-> api-spec
              (json/generate-string {:pretty true})

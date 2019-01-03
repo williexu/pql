@@ -29,6 +29,11 @@
   (lazy-seq (when-let [v (async/<!! c)]
               (cons v (chan-seq!! c)))))
 
+(defn query
+  [pool query]
+  (jdbc/with-db-connection [conn {:datasource pool}]
+    (jdbc/query conn query)))
+
 (defn query->chan
   "Load a resultset into an async channel, blocking on puts. This is assumed
    to be called outside the main thread.
