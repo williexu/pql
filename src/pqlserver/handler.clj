@@ -59,10 +59,13 @@
                  ;; result-seq is fully consumed, which blocks this function's
                  ;; exit.
                  _ (future (query->chan pool sql result-chan kill?))
-                 result-seq (chan-seq!! result-chan)]
+                 result-seq (chan-seq!! result-chan)
+                 pp (-> json/default-pretty-print-options
+                        (assoc :indent-arrays? true)
+                        json/create-pretty-printer)]
              (piped-input-stream
                #(let [w (io/make-writer % {:encoding "UTF-8"})]
-                  (wrapped-generate-stream result-seq cancel-fn w {:pretty true}))))
+                  (wrapped-generate-stream result-seq cancel-fn w {:pretty pp}))))
            (catch Exception e
              (rr/bad-request (.getMessage e)))))
     (GET "/plan/:version" [query version explain]
