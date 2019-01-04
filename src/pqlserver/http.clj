@@ -7,22 +7,6 @@
             [ring.util.io :refer [piped-input-stream]])
   (:import [java.io IOException]))
 
-(defmacro streamed-response
-  "Execute body, writing results to a piped-input-stream, which may be passed
-   to a ring response."
-  [writer-var cancel-fn & body]
-  `(piped-input-stream
-     (fn [ostream#]
-       (with-open [~writer-var (io/writer ostream# :encoding "UTF-8")]
-         (try
-           (do ~@body)
-           (catch IOException e#
-             (log/debug e# "Error streaming response")
-             (~cancel-fn))
-           (catch Exception e#
-             (log/error e# "Error streaming response")
-             (~cancel-fn)))))))
-
 (defn chan-seq!!
   "Create a lazy sequence of channel takes"
   [c]

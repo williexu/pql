@@ -1,12 +1,16 @@
 (ns pqlserver.handler
   (:require [cheshire.core :as json]
             [clojure.core.async :as async]
+            [clojure.java.io :as io]
+            [clojure.tools.logging :as log]
             [compojure.core :refer :all]
             [compojure.route :as route]
             [pqlserver.engine :refer [query->sql]]
-            [pqlserver.http :refer [streamed-response query->chan chan-seq!! query]]
+            [pqlserver.http :refer [query->chan chan-seq!! query]]
+            [ring.util.io :refer [piped-input-stream]]
             [pqlserver.parser :refer [pql->ast]]
-            [ring.util.response :as rr]))
+            [ring.util.response :as rr])
+  (:import [java.io IOException]))
 
 (defn json-response
   "Produce a json ring response"
@@ -17,6 +21,22 @@
       rr/response
       (rr/content-type "application/json; charset=utf-8")
       (rr/status code))))
+
+(defn wrapped-generate-stream
+  "This function wraps a call to json/generate-stream with a try/catch. It's
+   necessary due to what I believe is a bug in the clojure compiler, which is
+   demonstrated here:
+   https://github.com/wkalt/streaming-demo"
+  [result-seq cancel-fn writer opts]
+  (try
+    (json/generate-stream result-seq writer opts)
+    (catch IOException e
+      ;; These are client-side cancellations, so we log debug
+      (log/debug e "Error streaming response")
+      (cancel-fn))
+    (catch Exception e
+      (log/error e "Error streaming response")
+      (cancel-fn))))
 
 (defn make-routes
   [pool api-spec]
@@ -34,17 +54,15 @@
                  ;; Execute the query in a future, writing records to
                  ;; result-chan. In the main thread, lazily pull records off
                  ;; the channel, format them to json, and write to a
-                 ;; piped-input-stream (via streamed-response). Although we do
-                 ;; not track the state of the future, we know that it has
-                 ;; finished its work when result-seq is fully consumed, which
-                 ;; blocks this function's exit.
+                 ;; piped-input-stream. Although we do not track the state of
+                 ;; the future, we know that it has finished its work when
+                 ;; result-seq is fully consumed, which blocks this function's
+                 ;; exit.
                  _ (future (query->chan pool sql result-chan kill?))
                  result-seq (chan-seq!! result-chan)]
-             (streamed-response buf
-                                cancel-fn
-                                (-> result-seq
-                                    (json/generate-stream buf {:pretty true})
-                                    json-response)))
+             (piped-input-stream
+               #(let [w (io/make-writer % {:encoding "UTF-8"})]
+                  (wrapped-generate-stream result-seq cancel-fn w {:pretty true}))))
            (catch Exception e
              (rr/bad-request (.getMessage e)))))
     (GET "/plan/:version" [query version explain]
