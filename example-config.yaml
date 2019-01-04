@@ -8,3 +8,7 @@ database:
 
 webserver:
   port: 3000
+
+# Remove this in prod!
+development:
+  repl-port: 8002

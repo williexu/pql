@@ -77,6 +77,7 @@
                    :database
                    (pooler/make-datasource))
           {:keys [port] :as jetty-opts} (-> opts :config :webserver)
+          {:keys [nrepl-port]} (-> opts :config :development)
           spec (:spec opts)
           logging-opts {:log-level :info
                         :request-keys [:request-method :uri :remote-addr]}
@@ -85,7 +86,8 @@
                 (clojure.java.io/resource "logback.xml")}} (-> opts
                                                                :config
                                                                :service)]
-      (nrepl/start-server :port 8002)
+      (when nrepl-port
+        (nrepl/start-server :port nrepl-port))
       (configure-logging! logging-config)
       (instrument-jvm default-registry)
       (pql-json/add-common-json-encoders!)
