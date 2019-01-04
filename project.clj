@@ -2,7 +2,7 @@
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :min-lein-version "2.0.0"
-  :jvm-opts ["-Xmx128m"]
+  :jvm-opts ["-Xmx64m"]
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/tools.nrepl "0.2.13"]
                  [org.clojure/tools.cli "0.4.1"]
