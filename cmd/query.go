@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 
@@ -23,7 +24,9 @@ pql query "people { name ~ 'foo' and age > 30 limit 100}"`,
 		}
 		query := args[0]
 		c := client.NewClient()
-		c.Query(query)
+		out := bufio.NewWriter(os.Stdout)
+		defer out.Flush()
+		c.Query(query, out)
 	},
 }
 

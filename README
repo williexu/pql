@@ -7,7 +7,9 @@ Available Commands:
   configure   Configure the PQL client
   describe    Print a description of the configured API
   help        Help about any command
+  plan        Print the compiled SQL for a query
   query       Query your PQL server
+  shell       Interactive PQL shell
 
 Flags:
   -h, --help   help for pql

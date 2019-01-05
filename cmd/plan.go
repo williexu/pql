@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
 	"github.com/wkalt/pql/client"
-	"os"
 )
 
 var planCmd = &cobra.Command{
@@ -24,7 +25,8 @@ var planCmd = &cobra.Command{
 		}
 		query := args[0]
 		c := client.NewClient()
-		c.Plan(query)
+		_, body := c.Plan(query)
+		fmt.Println(body)
 	},
 }
 

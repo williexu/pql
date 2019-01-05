@@ -3,6 +3,7 @@ package client
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -19,8 +20,8 @@ type Client struct {
 }
 
 // Describe returns a description of the API schema
-func (c *Client) Describe() []byte {
-	url := fmt.Sprintf("%s/describe", c.URL)
+func (c *Client) DescribeEntity(entity string) []byte {
+	url := fmt.Sprintf("%s/describe/%s/%s", c.URL, c.APIVersion, entity)
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Fatal("Error getting API metadata:", err)
@@ -33,7 +34,23 @@ func (c *Client) Describe() []byte {
 	return body
 }
 
-func (c *Client) Plan(pql string) {
+// Describe returns a description of the API schema
+func (c *Client) Describe() []byte {
+	url := fmt.Sprintf("%s/describe/%s", c.URL, c.APIVersion)
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Fatal("Error getting API metadata:", err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal("Error reading response body:", err)
+	}
+	return body
+}
+
+// Plan returns a representation of the SQL to be executed.
+func (c *Client) Plan(pql string) (bool, string) {
 	url := fmt.Sprintf("%s/plan/%s", c.URL, c.APIVersion)
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
@@ -54,15 +71,14 @@ func (c *Client) Plan(pql string) {
 	}
 	switch {
 	case resp.StatusCode != 200:
-		fmt.Println(string(body))
-		os.Exit(1)
+		return false, string(body)
 	default:
-		fmt.Println(string(body))
+		return true, string(body)
 	}
 }
 
 // Query the PQL server
-func (c *Client) Query(pql string) {
+func (c *Client) Query(pql string, out io.Writer) {
 	url := fmt.Sprintf("%s/query/%s", c.URL, c.APIVersion)
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
@@ -99,12 +115,9 @@ func (c *Client) Query(pql string) {
 		os.Exit(1)
 
 	case resp.StatusCode == 200:
-		stdout := bufio.NewWriter(os.Stdout)
-		defer stdout.Flush()
 		buf := bufio.NewReader(resp.Body)
-		buf.WriteTo(stdout)
-		stdout.WriteString("\n")
-		stdout.Flush()
+		buf.WriteTo(out)
+		out.Write([]byte("\n"))
 	}
 }
 
