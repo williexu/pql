@@ -49,6 +49,21 @@ func (c *Client) Describe() []byte {
 	return body
 }
 
+// DescribeAll returns a description of the API schema
+func (c *Client) DescribeAll() []byte {
+	url := fmt.Sprintf("%s/describe-all", c.URL)
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Fatal("Error getting API metadata:", err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal("Error reading response body:", err)
+	}
+	return body
+}
+
 // Plan returns a representation of the SQL to be executed.
 func (c *Client) Plan(pql string) (bool, string) {
 	url := fmt.Sprintf("%s/plan/%s", c.URL, c.APIVersion)

@@ -32,7 +32,7 @@ var configureCmd = &cobra.Command{
 
 		m := make(map[string]interface{})
 
-		err = json.Unmarshal(client.Describe(), &m)
+		err = json.Unmarshal(client.DescribeAll(), &m)
 		if err != nil {
 			log.Fatal("Error gathering API spec:", err)
 		}
