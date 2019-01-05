@@ -107,19 +107,29 @@
 
             [[:from (entity :guard keyword?) [:extract columns & expr]]]
             (let [{:keys [base] :as query-rec} (get schema entity)]
-              (map->FromExpression
-                {:fields (mapv (partial node->plan schema) columns)
-                 :subquery base
-                 :where (some->> (first expr)
-                                 (node->plan schema))}))
+              (if-not base
+                (throw (Exception.
+                       (format "Unrecognized entity '%s'. Available entities: %s"
+                               (name entity)
+                               (mapv name (keys schema)))))
+                (map->FromExpression
+                  {:fields (mapv (partial node->plan schema) columns)
+                   :subquery base
+                   :where (some->> (first expr)
+                                   (node->plan schema))})))
 
             [[:from (entity :guard keyword?) expr]]
             (let [{:keys [base fields]} (get schema entity)]
-              (map->FromExpression
-                {:fields (sort (mapv :field (vals fields)))
-                 :subquery base
-                 :where (when (not-empty expr)
-                          (node->plan schema expr))}))
+              (if-not base
+                (throw (Exception.
+                         (format "Unrecognized entity '%s'. Available entities: %s"
+                                 (name entity)
+                                 (mapv name (keys schema)))))
+                (map->FromExpression
+                  {:fields (sort (mapv :field (vals fields)))
+                   :subquery base
+                   :where (when (not-empty expr)
+                            (node->plan schema expr))})))
 
             [[:and & exprs]]
             (map->AndExpression

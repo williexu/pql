@@ -9,6 +9,7 @@
             [pqlserver.http :refer [query->chan chan-seq!! query]]
             [ring.util.io :refer [piped-input-stream]]
             [pqlserver.parser :refer [pql->ast]]
+            [pqlserver.utils :refer [mapvals]]
             [ring.util.response :as rr])
   (:import [java.io IOException]))
 
@@ -79,8 +80,25 @@
                  json-response))
            (catch Exception e
              (rr/bad-request (.getMessage e)))))
-    (GET "/describe" []
+    (GET "/describe-all" []
          (-> api-spec
              (json/generate-string {:pretty true})
              json-response))
+    (GET "/describe/:version" [version]
+         (let [version-kwd (keyword version)]
+           (-> api-spec
+               version-kwd
+               keys
+               (json/generate-string {:pretty true})
+               json-response)))
+    (GET "/describe/:version/:entity" [entity version]
+         (let [version-kwd (keyword version)
+               entity-kwd (keyword entity)]
+           (-> api-spec
+               version-kwd
+               entity-kwd
+               :fields
+               (mapvals :type)
+               (json/generate-string {:pretty true})
+               json-response)))
     (route/not-found "Not Found")))
