@@ -1,21 +1,22 @@
 ## pql
-Data insights at awesome speed and extreme convenience
 
-Usage:
-  pql [command]
+    Data insights at awesome speed and extreme convenience
 
-Available Commands:
-  configure   Configure the PQL client
-  describe    Print a description of the configured API
-  help        Help about any command
-  plan        Print the compiled SQL for a query
-  query       Query your PQL server
-  shell       Interactive PQL shell
+    Usage:
+      pql [command]
 
-Flags:
-  -h, --help   help for pql
+    Available Commands:
+      configure   Configure the PQL client
+      describe    Print a description of the configured API
+      help        Help about any command
+      plan        Print the compiled SQL for a query
+      query       Query your PQL server
+      shell       Interactive PQL shell
 
-Use "pql [command] --help" for more information about a command.
+    Flags:
+      -h, --help   help for pql
+
+    Use "pql [command] --help" for more information about a command.
 
 
 ## Installing
