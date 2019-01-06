@@ -40,18 +40,20 @@
       (cancel-fn))))
 
 (defn make-routes
-  [pool api-spec]
+  [pools api-spec]
   (routes
     (GET "/" [] "Hello World")
-    (GET "/query/:version" [query version]
+    (GET "/:namespace/:version/query" [namespace query version]
          (try
            (let [version-kwd (keyword version)
+                 ns-kwd (keyword namespace)
                  sql (->> query
                           pql->ast
-                          (query->sql api-spec version-kwd))
+                          (query->sql api-spec ns-kwd version-kwd))
                  result-chan (async/chan)
                  kill? (async/chan)
                  cancel-fn #(async/>!! kill? ::cancel)
+                 pool (ns-kwd pools)
                  ;; Execute the query in a future, writing records to
                  ;; result-chan. In the main thread, lazily pull records off
                  ;; the channel, format them to json, and write to a
@@ -69,12 +71,13 @@
                   (wrapped-generate-stream result-seq cancel-fn w {:pretty pp}))))
            (catch Exception e
              (rr/bad-request (.getMessage e)))))
-    (GET "/plan/:version" [query version explain]
+    (GET "/:namespace/:version/plan" [namespace query version explain]
          (try
            (let [version-kwd (keyword version)
+                 ns-kwd (keyword namespace)
                  sql (->> query
                           pql->ast
-                          (query->sql api-spec version-kwd))]
+                          (query->sql api-spec ns-kwd version-kwd))]
              (-> {:query (first sql) :parameters (rest sql)}
                  (json/generate-string {:pretty true})
                  json-response))
@@ -84,17 +87,21 @@
          (-> api-spec
              (json/generate-string {:pretty true})
              json-response))
-    (GET "/describe/:version" [version]
-         (let [version-kwd (keyword version)]
+    (GET "/:namespace/:version/describe" [namespace version]
+         (let [version-kwd (keyword version)
+               ns-kwd (keyword namespace)]
            (-> api-spec
+               ns-kwd
                version-kwd
                keys
                (json/generate-string {:pretty true})
                json-response)))
-    (GET "/describe/:version/:entity" [entity version]
+    (GET "/:namespace/:version/describe/:entity" [namespace entity version]
          (let [version-kwd (keyword version)
-               entity-kwd (keyword entity)]
+               entity-kwd (keyword entity)
+               ns-kwd (keyword namespace)]
            (-> api-spec
+               ns-kwd
                version-kwd
                entity-kwd
                :fields

@@ -1,9 +1,10 @@
 # pqlserver
 
 `pqlserver` is a generic API server. It is inspired by the PuppetDB query API
-and implements a query language very close to
-[PQL](https://puppet.com/docs/puppetdb/5.1/api/query/v4/pql.html), with none of
-the Puppet-specific aspects.
+and implements a query language very close to [Puppet Query
+Language](https://puppet.com/docs/puppetdb/5.1/api/query/v4/pql.html), with
+none of the Puppet-specific aspects. To avoid confusion with its forebear,
+`PQL` in this project refers to _The People's Query Language_.
 
 Use the built-in API schema generator to create an API for your database in
 moments. If desired, edit the generated schema to better reflect your data

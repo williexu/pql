@@ -13,7 +13,7 @@
    :pool-name "db-pool"
    :adapter "postgresql"})
 
-(defn make-datasource [opts]
+(defn datasource [opts]
   (->> opts
        (merge default-opts)
        hk/make-datasource))

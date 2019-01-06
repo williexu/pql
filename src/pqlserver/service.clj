@@ -15,6 +15,7 @@
             [metrics.ring.instrument :refer [instrument-by uri-prefix]]
             [metrics.jvm.core :refer [instrument-jvm]]
             [metrics.reporters.jmx :as jmx]
+            [pqlserver.utils :refer [mapvals]]
             [pqlserver.handler :as handler])
   (:gen-class))
 
@@ -50,9 +51,9 @@
    :dbname (:database-name cfg)
    :host (:server-name cfg)})
 
-(defn start-server [pool spec logging-opts jetty-opts]
+(defn start-server [pools spec logging-opts jetty-opts]
   (log/infof "Serving on port %d" (:port jetty-opts))
-  (-> (handler/make-routes pool spec)
+  (-> (handler/make-routes pools spec)
       (ring-logger/wrap-log-request-params logging-opts)
       (wrap-defaults api-defaults)
       expose-metrics-as-json
@@ -63,19 +64,20 @@
   (let [opts (-> (cli/parse-opts args cli-options)
                  :options
                  validate-opts)
-        db-config (-> opts :config :database)]
+        namespaces (-> opts :config :namespaces)]
     (when-let [spec-file (:generate-spec opts)]
-      (->> db-config
-           db-config->db-spec
-           schema/get-schema
-           clojure.pprint/pprint
-           with-out-str
-           (spit spec-file))
+      (spit spec-file
+            (-> #(assoc %1 (keyword (:name %2)) (db-config->db-spec %2))
+                (reduce {} namespaces)
+                (mapvals schema/get-schema)
+                clojure.pprint/pprint
+                with-out-str))
       (System/exit 0))
-    (let [pool (-> opts
-                   :config
-                   :database
-                   (pooler/make-datasource))
+    (let [pools (->> opts
+                     :config
+                     :namespaces
+                     (reduce #(assoc %1 (keyword (:name %2))
+                                     (pooler/datasource (dissoc %2 :name))) {}))
           {:keys [port] :as jetty-opts} (-> opts :config :webserver)
           {:keys [nrepl-port]} (-> opts :config :development)
           spec (:spec opts)
@@ -92,4 +94,4 @@
       (instrument-jvm default-registry)
       (pql-json/add-common-json-encoders!)
       (jmx/start (jmx/reporter default-registry {}))
-      (start-server pool spec logging-opts jetty-opts))))
+      (start-server pools spec logging-opts jetty-opts))))

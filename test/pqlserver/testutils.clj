@@ -4,4 +4,4 @@
 (def test-db {:database-name "foo"})
 
 (defn test-pool []
-  (pooler/make-datasource test-db))
+  (pooler/datasource test-db))

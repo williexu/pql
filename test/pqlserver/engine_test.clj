@@ -9,9 +9,9 @@
 (use-fixtures :once with-test-db)
 
 (deftest test-engine
-  (let [schema (get-schema test-db-spec)]
+  (let [schema {:testing (get-schema test-db-spec)}]
     (are [input expected]
-         (let [sql (query->sql schema :v1 input)]
+         (let [sql (query->sql schema :testing :v1 input)]
            (testing "SQL is as expected"
              (= expected sql))
            (testing (format "generated SQL is valid\n%s" sql)
