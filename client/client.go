@@ -188,7 +188,3 @@ func NewClient() *Client {
 	}
 	return c
 }
-
-func main() {
-	fmt.Println("vim-go")
-}
