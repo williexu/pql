@@ -19,6 +19,7 @@ import (
 )
 
 var describeRegex = regexp.MustCompile(`/describe ([a-zA-Z0-9_]+)`)
+var namespaceRegex = regexp.MustCompile(`/namespace ([a-zA-Z0-9_]+)`)
 
 func executor(cmd string) {
 
@@ -121,6 +122,8 @@ func dispatchMetaCommand(c client.Client, cmd string) {
 		fmt.Println(string(c.Describe()))
 	} else if ms := describeRegex.FindStringSubmatch(cmd); len(ms) == 2 {
 		fmt.Println(string(c.DescribeEntity(ms[1])))
+	} else if ms := namespaceRegex.FindStringSubmatch(cmd); len(ms) == 2 {
+		fmt.Println("Would switch to:", ms[1], "from", c.Namespace)
 	}
 }
 

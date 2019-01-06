@@ -13,11 +13,14 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+type ClientSpec map[string]interface{}
+
 // Client represents a pqlserver client
 type Client struct {
-	URL        string `yaml:"url"`
-	APIVersion string `yaml:"version"`
-	Namespace  string `yaml:"namespace"`
+	URL        string     `yaml:"url"`
+	APIVersion string     `yaml:"version"`
+	Namespace  string     `yaml:"namespace"`
+	Spec       ClientSpec `yaml:"body"`
 }
 
 // Describe returns a description of the API schema
