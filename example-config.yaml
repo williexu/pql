@@ -1,0 +1,14 @@
+---
+database:
+  server-name: localhost
+  database-name: pqlserver
+  port-number: 5432
+  username: pqlserver
+  password: pqlserver
+
+webserver:
+  port: 3000
+
+# Remove this in prod!
+development:
+  repl-port: 8002

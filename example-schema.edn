@@ -1,0 +1,13 @@
+{:people
+ {:fields
+  {:street_address {:type :string, :field :people.street_address},
+   :age {:type :number, :field :people.age},
+   :name {:type :string, :field :people.name},
+   :siblings {:type :array, :field :people.siblings},
+   :attributes {:type :object, :field :people.attributes}},
+  :base {:from :people}},
+ :pets
+ {:fields
+  {:owner {:type :string, :field :pets.owner},
+   :name {:type :string, :field :pets.name}},
+  :base {:from :pets}}}
