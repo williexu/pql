@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -18,16 +19,20 @@ pql query "people { name ~ 'foo' and age > 30 }"
 pql query "people { name ~ 'foo' and age > 30 limit 100}"`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 {
-			fmt.Println("Supply a query")
-			os.Exit(1)
-		}
-		query := args[0]
 		c := client.NewClient()
 		out := bufio.NewWriter(os.Stdout)
 		defer out.Flush()
-		c.Query(query, out)
+		query(c, out, args...)
 	},
+}
+
+func query(c *client.Client, out io.Writer, args ...string) {
+	if len(args) == 0 {
+		fmt.Fprint(out, "Supply a query")
+		return
+	}
+	query := args[0]
+	c.Query(query, out)
 }
 
 func init() {

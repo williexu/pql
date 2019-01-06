@@ -19,15 +19,23 @@ var planCmd = &cobra.Command{
 	}`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 {
-			fmt.Println("Supply a query")
+		c := client.NewClient()
+		result, ok := plan(c, args...)
+		if !ok {
+			fmt.Println(result)
 			os.Exit(1)
 		}
-		query := args[0]
-		c := client.NewClient()
-		_, body := c.Plan(query)
-		fmt.Println(body)
+		fmt.Println(result)
 	},
+}
+
+func plan(c *client.Client, args ...string) (string, bool) {
+	if len(args) == 0 {
+		return "Supply a query", false
+	}
+	query := args[0]
+	_, body := c.Plan(query)
+	return string(body), true
 }
 
 func init() {

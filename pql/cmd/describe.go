@@ -15,12 +15,17 @@ var describeCmd = &cobra.Command{
 	'pql describe'. To print fields for an entity, 'pql describe <entity>'`,
 	Run: func(cmd *cobra.Command, args []string) {
 		c := client.NewClient()
-		if len(args) == 0 {
-			fmt.Println(string(c.Describe()))
-		} else {
-			fmt.Println(string(c.DescribeEntity(args[0])))
-		}
+		result := describe(c, args...)
+		fmt.Println(result)
 	},
+}
+
+func describe(c *client.Client, args ...string) string {
+	if len(args) == 0 {
+		return string(c.Describe())
+	} else {
+		return string(c.DescribeEntity(args[0]))
+	}
 }
 
 func init() {

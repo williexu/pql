@@ -94,6 +94,7 @@
                ns-kwd
                version-kwd
                keys
+               sort
                (json/generate-string {:pretty true})
                json-response)))
     (GET "/:namespace/:version/describe/:entity" [namespace entity version]

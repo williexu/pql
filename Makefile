@@ -15,3 +15,7 @@ client:
 	mkdir -p build
 	gox -osarch="linux/amd64 darwin/amd64" -output "build/{{.Dir}}_{{.OS}}_{{.Arch}}" ./...
 	GOBIN=$(CURDIR)/build go get github.com/junegunn/fzf
+
+.PHONY: install
+install:
+	cd pql && go install && cd -

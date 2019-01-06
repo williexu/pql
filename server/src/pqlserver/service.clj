@@ -60,6 +60,11 @@
       (instrument-by uri-prefix)
       (run-jetty jetty-opts)))
 
+(defn make-pools [namespaces]
+  (reduce (fn [m v]
+            (assoc m (keyword (:name v))
+                   (pooler/datasource (dissoc v :name)))) {} namespaces))
+
 (defn -main [& args]
   (let [opts (-> (cli/parse-opts args cli-options)
                  :options
@@ -76,8 +81,7 @@
     (let [pools (->> opts
                      :config
                      :namespaces
-                     (reduce #(assoc %1 (keyword (:name %2))
-                                     (pooler/datasource (dissoc %2 :name))) {}))
+                     make-pools)
           {:keys [port] :as jetty-opts} (-> opts :config :webserver)
           {:keys [nrepl-port]} (-> opts :config :development)
           spec (:spec opts)

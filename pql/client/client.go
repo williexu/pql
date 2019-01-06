@@ -16,10 +16,10 @@ import (
 
 // Client represents a pqlserver client
 type Client struct {
-	URL        string                            `yaml:"url"`
-	APIVersion string                            `yaml:"version"`
-	Namespace  string                            `yaml:"namespace"`
-	Spec       map[string]map[string]interface{} `yaml:"-"`
+	URL        string                                       `yaml:"url"`
+	APIVersion string                                       `yaml:"version"`
+	Namespace  string                                       `yaml:"namespace"`
+	Spec       map[string]map[string]map[string]interface{} `yaml:"-"`
 }
 
 func getConfig() string {
@@ -67,6 +67,14 @@ func (c *Client) SetNamespace(namespace string) error {
 	return fmt.Errorf("Namespace %s not found.", namespace)
 }
 
+func (c *Client) GetAPIVersions() []string {
+	versions := []string{}
+	for k := range c.Spec[c.Namespace] {
+		versions = append(versions, k)
+	}
+	return versions
+}
+
 func (c *Client) GetNamespaces() []string {
 	ns := []string{}
 	for k := range c.Spec {
@@ -75,8 +83,27 @@ func (c *Client) GetNamespaces() []string {
 	return ns
 }
 
+func (c *Client) GetEntities() []string {
+	entities := []string{}
+	for k := range c.Spec[c.Namespace][c.APIVersion] {
+		entities = append(entities, k)
+	}
+	return entities
+}
+
 // Describe returns a description of the API schema
 func (c *Client) DescribeEntity(entity string) []byte {
+	valid := false
+	for _, x := range c.GetEntities() {
+		if x == entity {
+			valid = true
+			break
+		}
+	}
+	if !valid {
+		return []byte(fmt.Sprintf("Unrecognized entity '%s'", entity))
+	}
+
 	url := fmt.Sprintf("%s/%s/%s/describe/%s", c.URL, c.Namespace, c.APIVersion, entity)
 	bytes := request(url)
 	return bytes
@@ -90,7 +117,7 @@ func (c *Client) Describe() []byte {
 }
 
 // Plan returns a representation of the SQL to be executed.
-func (c *Client) Plan(pql string) (bool, string) {
+func (c *Client) Plan(pql string) (bool, []byte) {
 	url := fmt.Sprintf("%s/%s/%s/plan", c.URL, c.Namespace, c.APIVersion)
 	resp := makeRequest(url, map[string]string{"query": pql})
 	defer resp.Body.Close()
@@ -100,9 +127,9 @@ func (c *Client) Plan(pql string) (bool, string) {
 	}
 	switch {
 	case resp.StatusCode != 200:
-		return false, string(body)
+		return false, body
 	default:
-		return true, string(body)
+		return true, body
 	}
 }
 
@@ -158,7 +185,7 @@ func (c *Client) WriteConfig() {
 func (c *Client) SetSpec() {
 	url := fmt.Sprintf("%s/describe-all", c.URL)
 	bytes := request(url)
-	m := make(map[string]map[string]interface{})
+	m := make(map[string]map[string]map[string]interface{})
 	err := json.Unmarshal(bytes, &m)
 	if err != nil {
 		log.Fatal("Error gathering API spec:", err)
@@ -182,6 +209,6 @@ func NewClient() *Client {
 	if err != nil {
 		log.Fatal("Error parsing config file:", err)
 	}
-	c.SetSpec()
+	go c.SetSpec() // This is a hack but makes the shell load quick
 	return c
 }

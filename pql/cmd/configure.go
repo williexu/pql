@@ -25,49 +25,48 @@ var configureCmd = &cobra.Command{
 	Short: "Configure the PQL client",
 	Long:  `Configure the PQL client with some simple input`,
 	Run: func(cmd *cobra.Command, args []string) {
-		reader := bufio.NewReader(os.Stdin)
-
-		serverURL := getServerURL(reader)
-
-		client := client.Client{
-			URL: serverURL,
-		}
-		client.SetSpec()
-
-		namespaces := client.GetNamespaces()
-
-		if len(namespaces) == 1 {
-			fmt.Println("Using namespace:", namespaces[0])
-		} else {
-			fmt.Println(fmt.Sprintf("Choose a default namespace: %v", namespaces))
-			ns, err := reader.ReadString('\n')
-			if err != nil {
-				log.Fatal("Error reading input:", err)
-			}
-			client.Namespace = strings.TrimRight(ns, "\n")
-		}
-
-		spec := client.Spec[client.Namespace]
-
-		availableVersions := []string{}
-		for k := range spec {
-			availableVersions = append(availableVersions, k)
-		}
-
-		if len(availableVersions) == 1 {
-			fmt.Println(fmt.Sprintf("Using API version %s", availableVersions[0]))
-			client.APIVersion = availableVersions[0]
-		} else {
-			fmt.Println(fmt.Sprintf("Select a version: %v", availableVersions))
-			version, err := reader.ReadString('\n')
-			if err != nil {
-				log.Fatal("Error reading input:", err)
-			}
-			client.APIVersion = strings.TrimRight(version, "\n")
-		}
-
-		client.WriteConfig()
+		configure(args...)
 	},
+}
+
+func configure(args ...string) {
+	reader := bufio.NewReader(os.Stdin)
+
+	serverURL := getServerURL(reader)
+
+	client := client.Client{
+		URL: serverURL,
+	}
+	client.SetSpec()
+
+	namespaces := client.GetNamespaces()
+
+	if len(namespaces) == 1 {
+		fmt.Println("Using namespace:", namespaces[0])
+	} else {
+		fmt.Println(fmt.Sprintf("Choose a default namespace: %v", namespaces))
+		ns, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatal("Error reading input:", err)
+		}
+		client.Namespace = strings.TrimRight(ns, "\n")
+	}
+
+	versions := client.GetAPIVersions()
+
+	if len(versions) == 1 {
+		fmt.Println(fmt.Sprintf("Using API version %s", versions[0]))
+		client.APIVersion = versions[0]
+	} else {
+		fmt.Println(fmt.Sprintf("Select a version: %v", versions))
+		version, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatal("Error reading input:", err)
+		}
+		client.APIVersion = strings.TrimRight(version, "\n")
+	}
+
+	client.WriteConfig()
 }
 
 func init() {

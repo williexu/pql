@@ -351,6 +351,13 @@ of 1/4 system RAM.
 * CLI client: https://github.com/wkalt/pql
 * Python client library: https://github.com/wkalt/pqlpy
 
+## Testing
+Client and server are both tested from clojure. To run the tests, run
+
+    make test
+
+From the project root. One of the clojure tests will run the golang tests, so the client is tested against a real and up to date server.
+
 ## Administration
 
 ### API Versioning

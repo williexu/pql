@@ -9,6 +9,7 @@
                  [org.clojure/core.match "0.3.0-alpha5"]
                  [io.forward/yaml "1.0.9"]
                  [instaparse "1.4.9"]
+                 [clj-http "3.9.1"]
                  [cheshire "5.8.1"]
                  [compojure "1.6.1"]
                  [honeysql "0.9.4"]
