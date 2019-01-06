@@ -188,8 +188,8 @@
 
   FromExpression
   (-plan->hsql [{:keys [fields subquery where]}]
-    (-> {:select (mapv -plan->hsql fields)
-         :from [(:from subquery)]}
+    (-> {:select (mapv -plan->hsql fields)}
+        (merge subquery)
         (cond-> where (assoc :where (-plan->hsql where)))))
 
   AndExpression

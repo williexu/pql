@@ -23,7 +23,7 @@
         typ (get type-translations (str/lower-case data_type))]
     (-> m
         (update-in [table :fields column] merge {:type typ :field field})
-        (assoc-in [table :base] {:from table}))))
+        (assoc-in [table :base] {:from [table]}))))
 
 (defn get-schema [db]
   (->> (jdbc/query db "select table_name, column_name, data_type from
