@@ -155,7 +155,7 @@ var shellCmd = &cobra.Command{
 		c := client.NewClient()
 
 		livePrefix := func() (string, bool) {
-			return fmt.Sprintf("%s=>", c.Namespace), true
+			return fmt.Sprintf("%s=> ", c.Namespace), true
 		}
 
 		p := prompt.New(

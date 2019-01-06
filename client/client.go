@@ -2,6 +2,7 @@ package client
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,14 +14,14 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-type ClientSpec map[string]interface{}
+type ClientSpec map[string]map[string]interface{}
 
 // Client represents a pqlserver client
 type Client struct {
 	URL        string     `yaml:"url"`
 	APIVersion string     `yaml:"version"`
 	Namespace  string     `yaml:"namespace"`
-	Spec       ClientSpec `yaml:"body"`
+	Spec       ClientSpec `yaml:"-"`
 }
 
 // Describe returns a description of the API schema
@@ -54,8 +55,8 @@ func (c *Client) Describe() []byte {
 	return body
 }
 
-// DescribeAll returns a description of the API schema
-func (c *Client) DescribeAll() []byte {
+// GetSpec gets the specification for a client
+func (c *Client) GetSpec() {
 	url := fmt.Sprintf("%s/describe-all", c.URL)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -66,7 +67,13 @@ func (c *Client) DescribeAll() []byte {
 	if err != nil {
 		log.Fatal("Error reading response body:", err)
 	}
-	return body
+
+	m := make(map[string]map[string]interface{})
+	err = json.Unmarshal(body, &m)
+	if err != nil {
+		log.Fatal("Error gathering API spec:", err)
+	}
+	c.Spec = m
 }
 
 // Plan returns a representation of the SQL to be executed.
