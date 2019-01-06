@@ -1,0 +1,6 @@
+- * make shell.go share a client across a session
+* make the prompt dynamic
+* refactor configure not to be so nasty
+*
+* add proper support for namespaces
+- validation, etc
