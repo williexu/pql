@@ -34,15 +34,12 @@ var configureCmd = &cobra.Command{
 		}
 		client.SetSpec()
 
-		availableNamespaces := []string{}
-		for k := range client.Spec {
-			availableNamespaces = append(availableNamespaces, k)
-		}
+		namespaces := client.GetNamespaces()
 
-		if len(availableNamespaces) == 1 {
-			fmt.Println("Using namespace:", availableNamespaces[0])
+		if len(namespaces) == 1 {
+			fmt.Println("Using namespace:", namespaces[0])
 		} else {
-			fmt.Println(fmt.Sprintf("Choose a default namespace: %v", availableNamespaces))
+			fmt.Println(fmt.Sprintf("Choose a default namespace: %v", namespaces))
 			ns, err := reader.ReadString('\n')
 			if err != nil {
 				log.Fatal("Error reading input:", err)

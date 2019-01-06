@@ -19,7 +19,7 @@ import (
 )
 
 var describeRegex = regexp.MustCompile(`/describe ([a-zA-Z0-9_]+)`)
-var namespaceRegex = regexp.MustCompile(`/namespace ([a-zA-Z0-9_]+)`)
+var namespaceRegex = regexp.MustCompile(`/j ([a-zA-Z0-9_]+)`)
 
 func makeExecutor(c *client.Client) func(string) {
 	return func(cmd string) {
@@ -121,8 +121,17 @@ func dispatchMetaCommand(c *client.Client, cmd string) {
 		fmt.Println(string(c.Describe()))
 	} else if ms := describeRegex.FindStringSubmatch(cmd); len(ms) == 2 {
 		fmt.Println(string(c.DescribeEntity(ms[1])))
+	} else if cmd == "/ls" {
+		fmt.Println(fmt.Sprintf("Available namespaces: %+v", c.GetNamespaces()))
 	} else if ms := namespaceRegex.FindStringSubmatch(cmd); len(ms) == 2 {
-		fmt.Println("Would switch to:", ms[1], "from", c.Namespace)
+		err := c.SetNamespace(ms[1])
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println(fmt.Sprintf("Switched to namespace '%s'", ms[1]))
+		}
+	} else {
+		fmt.Println(fmt.Sprintf("Command '%s' not found", cmd))
 	}
 }
 
@@ -147,7 +156,7 @@ var shellCmd = &cobra.Command{
 	Long:  `Interactively run PQL commands and introspect your data`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println()
-		fmt.Println(wordwrap.WrapString(`Welcome to PQL shell. To list available entities, type '/describe'. To list fields for an entity, type '/describe <entity>'. For fuzzy history search, press ctrl-r. To save a query result while viewing it, press 's'. To exit, press ctrl-d.`, 80))
+		fmt.Println(wordwrap.WrapString(`Welcome to PQL shell. To list available entities, type '/describe'. To list fields for an entity, type '/describe <entity>'. For fuzzy history search, press ctrl-r. To save a query result while viewing it, press 's'. To list available namespaces, type '/ls'. To switch to another namespace, use '/j <namespace>'. To exit, press ctrl-d.`, 80))
 
 		histfile := getHistFile()
 		history := loadHistFile(histfile)

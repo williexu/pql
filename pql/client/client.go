@@ -57,6 +57,24 @@ func makeRequest(url string, pmap map[string]string) *http.Response {
 	return resp
 }
 
+func (c *Client) SetNamespace(namespace string) error {
+	for _, ns := range c.GetNamespaces() {
+		if ns == namespace {
+			c.Namespace = namespace
+			return nil
+		}
+	}
+	return fmt.Errorf("Namespace %s not found.", namespace)
+}
+
+func (c *Client) GetNamespaces() []string {
+	ns := []string{}
+	for k := range c.Spec {
+		ns = append(ns, k)
+	}
+	return ns
+}
+
 // Describe returns a description of the API schema
 func (c *Client) DescribeEntity(entity string) []byte {
 	url := fmt.Sprintf("%s/%s/%s/describe/%s", c.URL, c.Namespace, c.APIVersion, entity)
