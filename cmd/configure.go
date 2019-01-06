@@ -30,15 +30,37 @@ var configureCmd = &cobra.Command{
 			URL: serverURL,
 		}
 
-		m := make(map[string]interface{})
+		m := make(map[string]map[string]interface{})
 
 		err = json.Unmarshal(client.DescribeAll(), &m)
 		if err != nil {
 			log.Fatal("Error gathering API spec:", err)
 		}
 
-		availableVersions := []string{}
+		availableNamespaces := []string{}
 		for k := range m {
+			availableNamespaces = append(availableNamespaces, k)
+		}
+
+		if len(availableNamespaces) == 1 {
+			fmt.Println("Using namespace:", availableNamespaces[0])
+		} else {
+			fmt.Println(fmt.Sprintf("Choose a namespace: %v", availableNamespaces))
+			ns, err := reader.ReadString('\n')
+			if err != nil {
+				log.Fatal("Error reading input:", err)
+			}
+			client.Namespace = strings.TrimRight(ns, "\n")
+		}
+
+		fmt.Println(fmt.Sprintf("MAP IS %+v", m))
+		fmt.Println(fmt.Sprintf("CLIENT NS: %s", client.Namespace))
+		fmt.Println(fmt.Sprintf("MAPVAL: %s", m[client.Namespace]))
+
+		spec := m[client.Namespace]
+
+		availableVersions := []string{}
+		for k := range spec {
 			availableVersions = append(availableVersions, k)
 		}
 

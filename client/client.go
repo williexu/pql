@@ -17,11 +17,13 @@ import (
 type Client struct {
 	URL        string `yaml:"url"`
 	APIVersion string `yaml:"version"`
+	Namespace  string `yaml:"namespace"`
 }
 
 // Describe returns a description of the API schema
 func (c *Client) DescribeEntity(entity string) []byte {
-	url := fmt.Sprintf("%s/describe/%s/%s", c.URL, c.APIVersion, entity)
+	url := fmt.Sprintf("%s/%s/%s/describe/%s",
+		c.URL, c.Namespace, c.APIVersion, entity)
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Fatal("Error getting API metadata:", err)
@@ -36,7 +38,7 @@ func (c *Client) DescribeEntity(entity string) []byte {
 
 // Describe returns a description of the API schema
 func (c *Client) Describe() []byte {
-	url := fmt.Sprintf("%s/describe/%s", c.URL, c.APIVersion)
+	url := fmt.Sprintf("%s/%s/%s/describe", c.URL, c.Namespace, c.APIVersion)
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Fatal("Error getting API metadata:", err)
@@ -66,7 +68,7 @@ func (c *Client) DescribeAll() []byte {
 
 // Plan returns a representation of the SQL to be executed.
 func (c *Client) Plan(pql string) (bool, string) {
-	url := fmt.Sprintf("%s/plan/%s", c.URL, c.APIVersion)
+	url := fmt.Sprintf("%s/%s/%s/plan", c.URL, c.Namespace, c.APIVersion)
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -94,7 +96,7 @@ func (c *Client) Plan(pql string) (bool, string) {
 
 // Query the PQL server
 func (c *Client) Query(pql string, out io.Writer) {
-	url := fmt.Sprintf("%s/query/%s", c.URL, c.APIVersion)
+	url := fmt.Sprintf("%s/%s/%s/query", c.URL, c.Namespace, c.APIVersion)
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
