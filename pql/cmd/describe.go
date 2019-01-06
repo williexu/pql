@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/wkalt/pql/client"
+	"github.com/wkalt/pql/pql/client"
 )
 
 // describeCmd represents the describe command

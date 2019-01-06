@@ -15,7 +15,7 @@ import (
 	"github.com/docker/docker/pkg/homedir"
 	"github.com/mitchellh/go-wordwrap"
 	"github.com/spf13/cobra"
-	"github.com/wkalt/pql/client"
+	"github.com/wkalt/pql/pql/client"
 )
 
 var describeRegex = regexp.MustCompile(`/describe ([a-zA-Z0-9_]+)`)

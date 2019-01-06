@@ -1,6 +1,6 @@
 package main
 
-import "github.com/wkalt/pql/cmd"
+import "github.com/wkalt/pql/pql/cmd"
 
 func main() {
 	cmd.Execute()

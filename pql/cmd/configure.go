@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/wkalt/pql/client"
+	"github.com/wkalt/pql/pql/client"
 )
 
 func getServerURL(r *bufio.Reader) string {
