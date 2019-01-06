@@ -163,7 +163,7 @@ func (c *Client) WriteConfig() {
 }
 
 // NewClient constructs a client if the config exists.
-func NewClient() Client {
+func NewClient() *Client {
 	home := homedir.Get()
 	conf := fmt.Sprintf("%s/.pqlrc", home)
 	if _, err := os.Stat(conf); os.IsNotExist(err) {
@@ -174,7 +174,7 @@ func NewClient() Client {
 		log.Fatal("Error reading config file:", err)
 	}
 
-	c := Client{}
+	c := &Client{}
 	err = yaml.Unmarshal(confBytes, &c)
 	if err != nil {
 		log.Fatal("Error parsing config file:", err)

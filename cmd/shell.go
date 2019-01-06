@@ -21,35 +21,34 @@ import (
 var describeRegex = regexp.MustCompile(`/describe ([a-zA-Z0-9_]+)`)
 var namespaceRegex = regexp.MustCompile(`/namespace ([a-zA-Z0-9_]+)`)
 
-func executor(cmd string) {
+func makeExecutor(c *client.Client) func(string) {
+	return func(cmd string) {
+		if strings.TrimSpace(cmd) == "" {
+			return
+		}
 
-	if strings.TrimSpace(cmd) == "" {
-		return
+		if strings.HasPrefix(cmd, "/") {
+			dispatchMetaCommand(c, cmd)
+			return
+		}
+
+		// Check if the query will parse; if not just print message and exit.
+		if ok, msg := c.Plan(cmd); !ok {
+			fmt.Println(msg)
+			return
+		}
+
+		// Pipe query to less. Block pipe close on closure of ch, which happens when
+		// less returns.
+		ch := make(chan struct{})
+		r, w := io.Pipe()
+		go readPipe(r, os.Stdout, ch, "less")
+		go spawnQuery(c, w, cmd)
+		<-ch
+		w.Close()
+
+		recordQuery(cmd)
 	}
-
-	c := client.NewClient()
-
-	if strings.HasPrefix(cmd, "/") {
-		dispatchMetaCommand(c, cmd)
-		return
-	}
-
-	// Check if the query will parse; if not just print message and exit.
-	if ok, msg := c.Plan(cmd); !ok {
-		fmt.Println(msg)
-		return
-	}
-
-	// Pipe query to less. Block pipe close on closure of ch, which happens when
-	// less returns.
-	ch := make(chan struct{})
-	r, w := io.Pipe()
-	go readPipe(r, os.Stdout, ch, "less")
-	go spawnQuery(c, w, cmd)
-	<-ch
-	w.Close()
-
-	recordQuery(cmd)
 }
 
 func getHistFile() string {
@@ -89,7 +88,7 @@ func writePipe(w *io.PipeWriter, cmd string, args ...string) {
 	w.Close()
 }
 
-func spawnQuery(c client.Client, w *io.PipeWriter, query string) {
+func spawnQuery(c *client.Client, w *io.PipeWriter, query string) {
 	defer w.Close()
 	c.Query(query, w)
 }
@@ -117,7 +116,7 @@ func recordQuery(query string) {
 	}
 }
 
-func dispatchMetaCommand(c client.Client, cmd string) {
+func dispatchMetaCommand(c *client.Client, cmd string) {
 	if cmd == "/describe" {
 		fmt.Println(string(c.Describe()))
 	} else if ms := describeRegex.FindStringSubmatch(cmd); len(ms) == 2 {
@@ -153,8 +152,14 @@ var shellCmd = &cobra.Command{
 		histfile := getHistFile()
 		history := loadHistFile(histfile)
 
+		c := client.NewClient()
+
+		livePrefix := func() (string, bool) {
+			return fmt.Sprintf("%s=>", c.Namespace), true
+		}
+
 		p := prompt.New(
-			executor,
+			makeExecutor(c),
 			completer,
 			prompt.OptionAddKeyBind(
 				prompt.KeyBind{
@@ -163,6 +168,7 @@ var shellCmd = &cobra.Command{
 				},
 			),
 			prompt.OptionHistory(history),
+			prompt.OptionLivePrefix(livePrefix),
 		)
 		p.Run()
 	},
