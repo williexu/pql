@@ -18,7 +18,7 @@ import (
 	"github.com/wkalt/pql/pql/client"
 )
 
-var describeRegex = regexp.MustCompile(`/describe ([a-zA-Z0-9_]+)`)
+var describeRegex = regexp.MustCompile(`/e ([a-zA-Z0-9_]+)`)
 var namespaceRegex = regexp.MustCompile(`/j ([a-zA-Z0-9_]+)`)
 
 func makeExecutor(c *client.Client) func(string) {
@@ -34,7 +34,7 @@ func makeExecutor(c *client.Client) func(string) {
 
 		// Check if the query will parse; if not just print message and exit.
 		if ok, msg := c.Plan(cmd); !ok {
-			fmt.Println(msg)
+			fmt.Println(string(msg))
 			return
 		}
 
@@ -117,12 +117,14 @@ func recordQuery(query string) {
 }
 
 func dispatchMetaCommand(c *client.Client, cmd string) {
-	if cmd == "/describe" {
+	if cmd == "/help" {
+		printHelpCommand()
+	} else if cmd == "/e" {
 		fmt.Println(string(c.Describe()))
 	} else if ms := describeRegex.FindStringSubmatch(cmd); len(ms) == 2 {
 		fmt.Println(string(c.DescribeEntity(ms[1])))
 	} else if cmd == "/ls" {
-		fmt.Println(fmt.Sprintf("Available namespaces: %+v", c.GetNamespaces()))
+		printAvailableNamespaces(c)
 	} else if ms := namespaceRegex.FindStringSubmatch(cmd); len(ms) == 2 {
 		err := c.SetNamespace(ms[1])
 		if err != nil {
@@ -130,9 +132,37 @@ func dispatchMetaCommand(c *client.Client, cmd string) {
 		} else {
 			fmt.Println(fmt.Sprintf("Switched to namespace '%s'", ms[1]))
 		}
+	} else if strings.HasPrefix(cmd, "/plan ") {
+		q := strings.SplitN(cmd, " ", 2)[1]
+		_, plan := c.Plan(q)
+		fmt.Println(string(plan))
 	} else {
 		fmt.Println(fmt.Sprintf("Command '%s' not found", cmd))
 	}
+}
+
+func printAvailableNamespaces(c *client.Client) {
+	fmt.Println(fmt.Sprintf("Available namespaces: %+v", c.GetNamespaces()))
+}
+
+func printHelpCommand() {
+	str := `Every command in the prompt is interpreted as a PQL query, except the following metacommands:
+
+/ls : list available namespaces
+/j <namespace> : connect to a new namespace
+/e : list entities in the current namespace
+/e <entity> : list available fields for an entity
+/plan <query>: display the compiled SQL for a query without executing it
+/help: display this help message
+
+When viewing a query result in less, you can exit the pager with 'q' and save
+the query result with 's'.
+
+Additional shell features:
+Fuzzy history search with ctrl-r
+Exit the shell with ctrl-d`
+
+	fmt.Println(wordwrap.WrapString(str, 80))
 }
 
 func completer(t prompt.Document) []prompt.Suggest {
@@ -155,8 +185,7 @@ var shellCmd = &cobra.Command{
 	Short: "Interactive PQL shell",
 	Long:  `Interactively run PQL commands and introspect your data`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println()
-		fmt.Println(wordwrap.WrapString(`Welcome to PQL shell. To list available entities, type '/describe'. To list fields for an entity, type '/describe <entity>'. For fuzzy history search, press ctrl-r. To save a query result while viewing it, press 's'. To list available namespaces, type '/ls'. To switch to another namespace, use '/j <namespace>'. To exit, press ctrl-d.`, 80))
+		fmt.Println(wordwrap.WrapString(`Welcome to PQL shell. Enter /help to view available commands.`, 80))
 
 		histfile := getHistFile()
 		history := loadHistFile(histfile)

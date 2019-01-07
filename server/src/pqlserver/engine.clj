@@ -72,7 +72,7 @@
                          (format "Invalid field '%s'. Available fields for '%s': %s"
                                  (name field)
                                  (name context)
-                                 (mapv name (keys available-fields))))))
+                                 (mapv name (sort (keys available-fields)))))))
               (map->FieldExpression
                 {:field contextualized-field}))
 
@@ -111,7 +111,7 @@
                 (throw (Exception.
                        (format "Unrecognized entity '%s'. Available entities: %s"
                                (name entity)
-                               (mapv name (keys schema)))))
+                               (mapv name (sort (keys schema))))))
                 (map->FromExpression
                   {:fields (mapv (partial node->plan schema) columns)
                    :subquery base
@@ -124,7 +124,7 @@
                 (throw (Exception.
                          (format "Unrecognized entity '%s'. Available entities: %s"
                                  (name entity)
-                                 (mapv name (keys schema)))))
+                                 (mapv name (sort (keys schema))))))
                 (map->FromExpression
                   {:fields (sort (mapv :field (vals fields)))
                    :subquery base

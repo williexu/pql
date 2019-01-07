@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -38,4 +39,14 @@ func TestQuery(t *testing.T) {
 	if !reflect.DeepEqual(expected, results) {
 		t.Error("Unexpected result from query")
 	}
+
+	// Query for an entity that doesn't exist
+	buf = bytes.NewBufferString("")
+	query(c, buf, "foobar{}")
+	exp := `Unrecognized entity 'foobar'. Available entities: ["people" "pets"]`
+
+	if strings.TrimRight(buf.String(), "\n") != exp {
+		t.Error("Unexpected result querying for entity that doesn't exist:", exp)
+	}
+
 }

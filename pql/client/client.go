@@ -29,12 +29,12 @@ func getConfig() string {
 func request(url string) []byte {
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Fatalf("Error making request to %s: %s", url, err)
+		log.Fatalf("Error making request to PQL server %s. Are you sure it's running?", url)
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("Error reading response body of request to %s: %s", url, err)
+		log.Fatalf("Error reading response body of request to %s.", url)
 	}
 	return body
 }
@@ -139,28 +139,9 @@ func (c *Client) Query(pql string, out io.Writer) {
 	resp := makeRequest(url, map[string]string{"query": pql})
 	defer resp.Body.Close()
 
-	switch {
-	case resp.StatusCode >= 500:
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal("Error reading 500 response body:", err)
-		}
-		fmt.Println("Server error:", string(body))
-		os.Exit(1)
-
-	case resp.StatusCode >= 400:
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal("Error reading 400 response body:", err)
-		}
-		fmt.Println(string(body))
-		os.Exit(1)
-
-	case resp.StatusCode == 200:
-		buf := bufio.NewReader(resp.Body)
-		buf.WriteTo(out)
-		out.Write([]byte("\n"))
-	}
+	buf := bufio.NewReader(resp.Body)
+	buf.WriteTo(out)
+	out.Write([]byte("\n"))
 }
 
 // WriteConfig writes client attributes to the user's config file
@@ -209,6 +190,6 @@ func NewClient() *Client {
 	if err != nil {
 		log.Fatal("Error parsing config file:", err)
 	}
-	go c.SetSpec() // This is a hack but makes the shell load quick
+	c.SetSpec()
 	return c
 }
