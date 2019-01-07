@@ -20,4 +20,13 @@
             (let [{:keys [out exit err]} (sh "/usr/bin/go" "test" "-v" "./...")]
               (is (= 0 exit))
               (println out)
-              (println err))))))))
+              (println err))))))
+
+    (testing "pqlpy client lib"
+      (let [wd (.getCanonicalPath (clojure.java.io/file "../python"))]
+        (with-sh-dir wd
+          (with-sh-env {"PQL_TEST_SERVER_URL" *server-url*}
+            (let [{:keys [out exit err]} (sh "python" "test.py")]
+              (is (= 0 exit))
+              (print out)
+              (print err))))))))

@@ -3,8 +3,8 @@ import urllib
 
 
 class Client(object):
-    def __init__(self, server_url, version="v1"):
-        self.endpoint = "{}/query/{}".format(server_url, version)
+    def __init__(self, server_url, namespace, version="v1"):
+        self.endpoint = "{}/{}/{}/query".format(server_url, namespace, version)
 
     def query(self, pql):
         """Query the PQL server, returning a generator of json objects to allow
