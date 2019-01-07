@@ -2,7 +2,7 @@ test:
 	cd server && lein test && cd -
 
 .PHONY: build
-build: server client
+build: clean server client
 
 .PHONY: server
 server:
@@ -13,10 +13,15 @@ server:
 .PHONY: client
 client:
 	mkdir -p build
-	gox -osarch="linux/amd64 darwin/amd64" -output "build/{{.Dir}}_{{.OS}}_{{.Arch}}" ./...
+	gox -osarch="linux/amd64" -output "build/{{.Dir}}" ./...
 	GOBIN=$(CURDIR)/build go get github.com/junegunn/fzf
-	cd build && fpm -s dir -t deb -n pql -v 0.0.1 . ./pql_linux_amd64=/usr/bin/ ./fzf=/usr/bin/ && cd -
+	cd build && fpm -s dir -t deb -n pql -v 0.0.1 . ./pql=/usr/bin/ ./fzf=/usr/bin/ && cd -
+	tar cvf build/pql-0.0.1.tar build/fzf build/pql
 
 .PHONY: install
 install:
 	cd pql && go install && cd -
+
+.PHONY: clean
+clean:
+	rm -rf build/*
