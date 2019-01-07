@@ -56,7 +56,7 @@
   (-> (handler/make-routes pools spec)
       (ring-logger/wrap-log-request-params logging-opts)
       (wrap-defaults api-defaults)
-      expose-metrics-as-json
+      (expose-metrics-as-json "/pqlserver-metrics")
       (instrument-by uri-prefix)
       (run-jetty jetty-opts)))
 
