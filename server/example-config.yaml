@@ -1,10 +1,11 @@
 ---
-database:
-  server-name: localhost
-  database-name: pqlserver
-  port-number: 5432
-  username: pqlserver
-  password: pqlserver
+namespaces:
+  - name: test
+    server-name: localhost
+    database-name: pqlserver
+    port-number: 5432
+    username: pqlserver
+    password: pqlserver
 
 webserver:
   port: 3000

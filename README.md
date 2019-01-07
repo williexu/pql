@@ -1,142 +1,104 @@
-# Client
+# PQL Suite
 
-    Data insights at awesome speed and extreme convenience
+This project consists of client and server components for a generic database
+query interface inspired by the PuppetDB query API and based on [Puppet Query
+Language](https://puppet.com/docs/puppetdb/5.1/api/query/v4/pql.html). The
+language in this repo retains none of the Puppet-specific aspects of its
+predecessor, includes support for a few additional operators, and lacks support
+for a few features of the original. As such, PQL in this project is _the
+People's Query Language_.
 
-    Usage:
-      pql [command]
+The PQL server allows you to generate an API specification from one or more
+existing Postgres databases and tweak them to suit your needs (similar to
+application-level views). The client tools allows you to consume API data
+either through a shell (`pql shell`), a command line query tool (`pql query`),
+or a python library (`pqlpy`). All responses are streamed, so users can pull
+large amounts of data through the API without stressing the server, removing
+the need in most cases to paginate or make multiple API calls.
 
-    Available Commands:
-      configure   Configure the PQL client
-      describe    Print a description of the configured API
-      help        Help about any command
-      plan        Print the compiled SQL for a query
-      query       Query your PQL server
-      shell       Interactive PQL shell
+## Client tool
 
-    Flags:
-      -h, --help   help for pql
+### Installing
 
-    Use "pql [command] --help" for more information about a command.
+The `pql` client tool can be installed in a couple ways. If you have a
+working golang installation, you can get a working install with
 
-
-## Installing
-
-`pql shell` requires `fzf`. If you have a working golang installation, you can
-install them like this:
-
-    go get github.com/wkalt/pql
+    go get github.com/wkalt/pql/pql
     go get github.com/junegunn/fzf
 
-If you are on a Debian-based system, you can install a .deb package from the
-releases page, which will install both programs.
+`fzf` is a fuzzy file finder that `pql shell` uses for reverse history search.
+If you would prefer a deb package, you can grab one from the releases tab that
+will provide both binaries. If you'd rather get binaries, there are binaries
+for both `pql` and `fzf` in the release tarball on the same page.
 
-If you are on Mac OS, you can download the darwin tarball from the releases
-page and place the contents on your path, or you can install golang with
+On OSX, you are best off installing golang via homebrew (`brew install golang`)
+and following the `go get` instructions above.
 
-    brew install golang
+### Using
 
-and use the instructions above.
+To get started with the tool, first connect it to a PQL server by issuing `pql
+configure`. This will prompt you to enter a server URL and in cases where your
+server provides multiple, select a namespace. For example,
 
-# Server
-
-`pqlserver` is a generic API server. It is inspired by the PuppetDB query API
-and implements a query language very close to [Puppet Query
-Language](https://puppet.com/docs/puppetdb/5.1/api/query/v4/pql.html), with
-none of the Puppet-specific aspects. To avoid confusion with its forebear,
-`PQL` in this project refers to _The People's Query Language_.
-
-Use the built-in API schema generator to create an API for your database in
-moments. If desired, edit the generated schema to better reflect your data
-model, for instance if your database is substantially normalized or has an
-otherwise loose mapping from tables to public entities.
-
-## Demonstration
-
-There is a public pqlserver instance running at http://wyattalt.com:3000. The
-fastest way to get a feel for the service is to install the client tool and
-connect to this instance:
-
-    $ go get github.com/wkalt/pql
     $ pql configure
     Enter a server url:
     http://wyattalt.com:3000
+    Using namespace: world
+    Using API version v1
+    Created ~/.pqlrc
 
-    $ pql query "country { name = 'Afghanistan'}"
-    [ {
-        "lifeexpectancy" : 45.9,
-        "gnpold" : null,
-        "continent" : "Asia",
-        "code2" : "AF",
-        "name" : "Afghanistan",
-        "capital" : 1,
-        "indepyear" : 1919,
-        "surfacearea" : 652090.0,
-        "region" : "Southern and Central Asia",
-        "gnp" : 5976.00,
-        "population" : 22720000,
-        "localname" : "Afganistan/Afqanestan",
-        "code" : "AFG",
-        "governmentform" : "Islamic Emirate",
-        "headofstate" : "Mohammad Omar"
-    } ]
+Once configured, you can use pql in either a shell mode or as a CLI tool that
+can integrate with unix pipes and such.
 
-This instance is running off the "world" dataset available for download [on
-pgfoundry](http://pgfoundry.org/projects/dbsamples). The API specification it
-is using is generated directly from the database and is copied below:
+To view the entities exposed by your namespace, use `pql describe`:
 
-    {:city
-     {:fields
-      {:id {:type :number, :field :city.id},
-       :name {:type :string, :field :city.name},
-       :countrycode {:type nil, :field :city.countrycode},
-       :district {:type :string, :field :city.district},
-       :population {:type :number, :field :city.population}},
-      :base {:from :city}},
-     :country
-     {:fields
-      {:lifeexpectancy {:type nil, :field :country.lifeexpectancy},
-       :gnpold {:type nil, :field :country.gnpold},
-       :continent {:type :string, :field :country.continent},
-       :code2 {:type nil, :field :country.code2},
-       :name {:type :string, :field :country.name},
-       :capital {:type :number, :field :country.capital},
-       :indepyear {:type nil, :field :country.indepyear},
-       :surfacearea {:type nil, :field :country.surfacearea},
-       :region {:type :string, :field :country.region},
-       :gnp {:type nil, :field :country.gnp},
-       :population {:type :number, :field :country.population},
-       :localname {:type :string, :field :country.localname},
-       :code {:type nil, :field :country.code},
-       :governmentform {:type :string, :field :country.governmentform},
-       :headofstate {:type :string, :field :country.headofstate}},
-      :base {:from :country}},
-     :countrylanguage
-     {:fields
-      {:countrycode {:type nil, :field :countrylanguage.countrycode},
-       :language {:type :string, :field :countrylanguage.language},
-       :isofficial {:type :boolean, :field :countrylanguage.isofficial},
-       :percentage {:type nil, :field :countrylanguage.percentage}},
-      :base {:from :countrylanguage}}}
+    $ pql describe
+    [ "city", "country", "countrylanguage" ]
 
-From the schema you can see that there are three public entities: `city`,
-`country`, and `countrylanguage`. Each entity has a collection of projected
-`fields`, as well as a `base` selection specified in [Honey
-SQL](https://github.com/jkk/honeysql). For an example of how or why the schema
-would be modified, suppose I wanted to return the continent in the city entity.
-I would need to add a new field under the `:city` keyword valued
+To view the API fields associated with an entity, use `pql describe <entity>`:
 
-    :continent {:type :string :field :country.continent}
+    $ pql describe city
+    {
+      "id" : "number",
+      "name" : "string",
+      "countrycode" : null,
+      "district" : "string",
+      "population" : "number"
+    }
 
-and change the base selection for `:city` to
+To query an entity, the command will look like this:
 
-    :base {:from :city
-           :join [:country [:= :country.code :city.countrycode]]}
+    $ pql query "city { name ~ 'Francisco' and population > 500000}"
+    [
+     {
+      "countrycode" : "USA",
+      "district" : "California",
+      "id" : 3805,
+      "name" : "San Francisco",
+      "population" : 776733
+     }
+    ]
 
-## Further examples
+To see the compiled SQL associated with a query, use `pql plan`:
 
-The query language supports the following operators:
+    $ pql plan "city { name ~ 'Francisco' and population > 500000}"
+    {
+      "query" : "SELECT city.countrycode, city.district, city.id, city.name, city.population FROM city WHERE (city.name ~ ? AND city.population > ?)",
+      "parameters" : [ "Francisco", 500000 ]
+    }
 
-Comparison for strings and numbers
+
+As an alternative to the workflow above, you can run `pql shell`, which will
+kick you into a shell interface and allow you to run queries without quoting,
+retain a searchable query history, and view query results in your pager. See
+the `/help` command in PQL shell for usage instructions.
+
+
+## Language features
+
+PQL supports the following operators:
+
+Comparison for strings and numbers:
 * `<=`
 * `<`
 * `>=`
@@ -144,19 +106,19 @@ Comparison for strings and numbers
 * `=`
 * `!=`
 
-Regular expressions
+Regular expressions:
 * Case-sensitive regex: `~`
 * Negated case-sensitive regex: `!~`
 * Case-insensitive regex: `~*`
 * Negated case-insensitive regex: `!~*`
 
-Null checks
+Null checks:
 * `is null`
 * `is not null`
 
-Additionally, supported language concepts include
+Additional supported language concepts include:
 
-* `limit`, `offset`, and ascending/decending `order by`:
+* `limit`, `offset`, ascending/descending `order by`
 
     ```
     [~] $ pql query "country{ indepyear > 1900 and lifeexpectancy is not null order by lifeexpectancy limit 1}"
@@ -176,27 +138,6 @@ Additionally, supported language concepts include
       "code" : "ZMB",
       "governmentform" : "Republic",
       "headofstate" : "Frederick Chiluba"
-    } ]
-    ```
-
-    ```
-    [~] $ pql query "country{ indepyear > 1900 and lifeexpectancy is not null order by lifeexpectancy desc limit 1}"
-    [ {
-      "lifeexpectancy" : 80.1,
-      "gnpold" : 96318.00,
-      "continent" : "Asia",
-      "code2" : "SG",
-      "name" : "Singapore",
-      "capital" : 3208,
-      "indepyear" : 1965,
-      "surfacearea" : 618.0,
-      "region" : "Southeast Asia",
-      "gnp" : 86503.00,
-      "population" : 3567000,
-      "localname" : "Singapore/Singapura/Xinjiapo/Singapur",
-      "code" : "SGP",
-      "governmentform" : "Republic",
-      "headofstate" : "Sellapan Rama Nathan"
     } ]
     ```
 
@@ -244,33 +185,7 @@ Additionally, supported language concepts include
     } ]
     ```
 
-* `group by` and aggregate functions
-
-    ```
-    [~] $ pql query "country[avg(population), continent] { group by continent} "
-    [ {
-      "avg" : 15871186.956521739130,
-        "continent" : "Europe"
-    }, {
-      "avg" : 1085755.357142857143,
-        "continent" : "Oceania"
-    }, {
-      "avg" : 72647562.745098039216,
-        "continent" : "Asia"
-    }, {
-      "avg" : 13053864.864864864865,
-        "continent" : "North America"
-    }, {
-      "avg" : 13525431.034482758621,
-        "continent" : "Africa"
-    }, {
-      "avg" : 0E-20,
-        "continent" : "Antarctica"
-    }, {
-      "avg" : 24698571.428571428571,
-        "continent" : "South America"
-    } ]
-    ```
+* Group by and aggregate functions:
 
     ```
     [~] $ pql query "country[count(), continent] { group by continent} "
@@ -298,7 +213,71 @@ Additionally, supported language concepts include
     } ]
     ```
 
-## Supported databases
+* JSON object descendence ('dot notation')
+
+    `$ pql query "country { attributes.foo.bar = 'baz'}"
+
+
+## Python client
+This repo also includes a python client, `pqlpy`. This is an extremely simple
+`urllib` wrapper that simply exposes a PQL server response as a generator. To
+use it,
+
+    from pqlpy import Client
+    c = Client("http://wyattalt.com:3000", "world")
+    results = c.query("country{}")
+    for record in results:
+        print("record: ", record)
+
+## Server
+
+`pqlserver` is the server component. It is responsible for housing the API
+specification, compiling PQL to SQL, maintaining connection pools to configured
+databases, and streaming responses from the database to connected clients.
+
+### Running locally
+
+To run locally, you will need [Leiningen][] 2.0.0 or later.
+
+[leiningen]: https://github.com/technomancy/leiningen
+
+Once lein is installed, you need to generate an API specification from your
+database. Copy the file `example-config.yaml` to `config.yaml`, and edit it to
+point at our database(s), with one namespace per database. Once it is
+configured, generate the API spec with
+
+    lein run -c config.yaml --generate-spec spec.edn
+
+After this runs, you can start the server with
+
+    lein run -c config.yaml -s spec.edn
+
+
+### Running from a jar
+
+PQL is deployed as a jar. To build the jar locally, you can run
+
+    lein uberjar
+
+from the server directory. The resulting artifact can be run with
+
+    java -Xmx128m -jar target/pqlserver-0.1.0-SNAPSHOT-standalone.jar -c config.yaml -s spec.edn
+
+Note that the version number of the artifact may be different, and that setting
+the heap size is not strictly required. If not set, it will use the JVM default
+of 1/4 system RAM. Importantly, this can cause issues on containerized
+environments where the JVM will base the calculation on the host's capacity.
+128m is probably a pretty good place to start.
+
+## Administration
+
+### Hardware requirements
+The service is intended to be very lightweight. All query results are streamed
+directly from the database to the client to speed responses and reduce memory
+consumption. I would recommend starting with a 128mb heap and seeing how far
+that gets you.
+
+### Supported databases
 
 The following databases are supported:
 
@@ -307,58 +286,6 @@ The following databases are supported:
 Extension to other SQL-talking databases such as MySQL or BigQuery should be
 relatively light work. Document stores will be more involved but aren't
 necessarily precluded.
-
-## Hardware requirements
-The service is intended to be very lightweight. All query results are streamed
-directly from the database to the client to speed responses and reduce memory
-consumption. I would recommend starting with a 128mb heap and seeing how far
-that gets you.
-
-## Prerequisites
-
-To run locally, you will need [Leiningen][] 2.0.0 or later.
-
-[leiningen]: https://github.com/technomancy/leiningen
-
-## Running
-
-To run the application, you must first generate an API schema from your
-database. To start, copy the file `example-config.yaml` to `config.yaml`, and
-edit it to suit your needs. Once you have it configured to point at the
-appropriate database, generate the API spec with
-
-    lein run -c config.yaml --generate-spec spec.edn
-
-After this runs, you can start the server with
-
-    lein run -c config.yaml -s spec.edn
-
-## Building
-
-PQLServer is deployed as a jar and can be built from source with `leiningen`:
-
-    lein uberjar
-
-The resulting artifact can then be run with,
-
-    java -Xmx128m -jar target/pqlserver-0.1.0-SNAPSHOT-standalone.jar -c config.yaml -s spec.edn
-
-Note that the version number of the artifact may be different, and that setting
-the heap size is not strictly required. If not set, it will use the JVM default
-of 1/4 system RAM.
-
-## Additional tooling
-* CLI client: https://github.com/wkalt/pql
-* Python client library: https://github.com/wkalt/pqlpy
-
-## Testing
-Client and server are both tested from clojure. To run the tests, run
-
-    make test
-
-From the project root. One of the clojure tests will run the golang tests, so the client is tested against a real and up to date server.
-
-## Administration
 
 ### API Versioning
 Consumers may find need to make breaking API changes. The pqlserver API
@@ -389,6 +316,19 @@ An insecure example is
     -Dcom.sun.management.jmxremote.authenticate=false \
     -jar target/pqlserver-0.1.0-SNAPSHOT-standalone.jar -c config.yaml -s spec.edn
 
-## License
+## Building and testing
+Client and server tests are all run from clojure, for the convenience of
+testing clients against a real and up-to-date server. To run the tests, run
 
+    make test
+
+from the project root. To build all deployment artifacts, run
+
+    make build
+
+to install the client tool, run
+
+    make install
+
+## License
 Copyright © 2018 Wyatt Alt

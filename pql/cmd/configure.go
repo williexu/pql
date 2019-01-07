@@ -43,6 +43,7 @@ func configure(args ...string) {
 
 	if len(namespaces) == 1 {
 		fmt.Println("Using namespace:", namespaces[0])
+		client.Namespace = namespaces[0]
 	} else {
 		fmt.Println(fmt.Sprintf("Choose a default namespace: %v", namespaces))
 		ns, err := reader.ReadString('\n')
