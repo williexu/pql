@@ -92,6 +92,19 @@ drop you into a shell interface and allow you to run queries without quoting,
 retain a searchable query history, and view query results in your pager. See
 the `/help` command in PQL shell for usage instructions.
 
+Note that `pql shell` uses `less` as its pager. Since `less` supports
+reverse-scrolling, it must buffer all previously seen results in memory. This
+means traversing huge (multigigabyte) resultsets in `pql shell` be inadvisable,
+although such resultsets can be saved with 's' without issue.
+
+If you need to traverse a huge resultset with the pager (you probably don't),
+set the environment variable
+
+    PQL_PAGER=more
+
+This will allow you to browse, but not save, an arbitrary resultset with
+minimal memory overhead.
+
 
 ### Language features
 

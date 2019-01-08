@@ -42,7 +42,16 @@ func makeExecutor(c *client.Client) func(string) {
 		// less returns.
 		ch := make(chan struct{})
 		r, w := io.Pipe()
-		go readPipe(r, os.Stdout, ch, "less")
+
+		epager := os.Getenv("PQL_PAGER")
+		var pager string
+		switch epager {
+		case "":
+			pager = "less"
+		default:
+			pager = epager
+		}
+		go readPipe(r, os.Stdout, ch, pager)
 		go spawnQuery(c, w, cmd)
 		<-ch
 		w.Close()
