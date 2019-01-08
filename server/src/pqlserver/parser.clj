@@ -2,23 +2,11 @@
   (:import com.fasterxml.jackson.core.JsonParseException)
   (:require [instaparse.core :as insta]
             [clojure.string :as str]
-            [clojure.core.match :as cm]
             [cheshire.core :as json]))
 
 (defn paging-clause?
   [v]
   (= :pagingclause (first v)))
-
-(defn update-cond
-  [m pred ks f & args]
-  (if pred
-    (apply update-in m ks f args)
-    m))
-
-(defn update-when
-  [m ks f & args]
-  (let [val (get-in m ks ::not-found)]
-    (apply update-cond m (not= val ::not-found) ks f args)))
 
 (defn slurp-right
   [& vs]
@@ -28,7 +16,6 @@
   [entity & args]
   (let [paging-groups (group-by paging-clause? args)
         paging-args (sort (get paging-groups true))
-        nonpaging-args (get paging-groups false)
         other-clauses (get paging-groups false)
         stripped-from (slurp-right
                         [:from (keyword entity)]

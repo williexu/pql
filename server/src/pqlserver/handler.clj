@@ -6,7 +6,7 @@
             [compojure.core :refer :all]
             [compojure.route :as route]
             [pqlserver.engine :refer [query->sql]]
-            [pqlserver.http :refer [query->chan chan-seq!! query]]
+            [pqlserver.http :refer [query->chan chan-seq!!]]
             [ring.util.io :refer [piped-input-stream]]
             [pqlserver.parser :refer [pql->ast]]
             [pqlserver.utils :refer [mapvals]]
@@ -71,7 +71,7 @@
                   (wrapped-generate-stream result-seq cancel-fn w {:pretty pp}))))
            (catch Exception e
              (rr/bad-request (.getMessage e)))))
-    (GET "/:namespace/:version/plan" [namespace query version explain]
+    (GET "/:namespace/:version/plan" [namespace query version]
          (try
            (let [version-kwd (keyword version)
                  ns-kwd (keyword namespace)

@@ -1,6 +1,5 @@
 (ns pqlserver.fixtures
-  (:require [pqlserver.pooler :as pooler]
-            [clojure.java.jdbc :as jdbc]))
+  (:require [clojure.java.jdbc :as jdbc]))
 
 
 (def ^:dynamic *server-url* nil)

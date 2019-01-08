@@ -10,7 +10,6 @@
    database backends."
   (:require [clojure.core.match :as cm]
             [clojure.string :as str]
-            [clj-time.core :as t]
             [clj-time.coerce :as c]
             [zip.visit :as zv]
             [clojure.zip :as z]
@@ -37,7 +36,6 @@
 (defrecord InExpression [column subquery])
 (defrecord NotExpression [clause])
 (defrecord OrExpression [clauses])
-(defrecord RegexExpression [column value])
 (defrecord NullExpression [column null?])
 (defrecord LimitExpression [subquery limit])
 (defrecord OffsetExpression [subquery limit])
@@ -106,7 +104,7 @@
                :offset offset})
 
             [[:from (entity :guard keyword?) [:extract columns & expr]]]
-            (let [{:keys [base] :as query-rec} (get schema entity)]
+            (let [{:keys [base]} (get schema entity)]
               (if-not base
                 (throw (Exception.
                        (format "Unrecognized entity '%s'. Available entities: %s"
@@ -254,10 +252,10 @@
    for validation, but such context is unavailable in a top-down parse of the
    AST. Annotating the AST prior to parsing eliminates the need to keep track
    of this context while parsing."
-  (zv/visitor :pre [n s]
-              (when (and (vector? n) (= :from (first n)))
-                {:node (vary-meta n assoc :context (second n))
-                 :state (second n)})))
+  (zv/visitor :pre [node state]
+              (when (and (vector? node) (= :from (first node)))
+                {:node (vary-meta node assoc :context (second node))
+                 :state (second node)})))
 
 (def fill-meta
   (zv/visitor
@@ -268,11 +266,11 @@
          :state ctx}))))
 
 (defn query->sql
-  [schema namespace version query]
+  [schema namesp version query]
   (let [annotated-query (-> (z/vector-zip query)
                             (zv/visit nil [update-meta fill-meta])
                             :node)]
     (->> annotated-query
-         (node->plan (-> schema namespace version))
+         (node->plan (-> schema namesp version))
          plan->hsql
          hc/format)))

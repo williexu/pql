@@ -18,8 +18,7 @@
 
   clojure.lang.IPersistentMap
   (set-parameter [v ^java.sql.PreparedStatement stmt ^long i]
-    (let [conn (.getConnection stmt)
-          meta (.getParameterMetaData stmt)
+    (let [meta (.getParameterMetaData stmt)
           type-name (.getParameterTypeName meta i)
           obj (doto (PGobject.)
                 (.setType type-name)

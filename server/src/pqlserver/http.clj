@@ -1,10 +1,8 @@
 (ns pqlserver.http
   "Custom code for HTTP communication"
-  (:require [clojure.java.io :as io]
-            [clojure.tools.logging :as log]
+  (:require [clojure.tools.logging :as log]
             [clojure.core.async :as async]
-            [clojure.java.jdbc :as jdbc]
-            [ring.util.io :refer [piped-input-stream]])
+            [clojure.java.jdbc :as jdbc])
   (:import [java.io IOException]))
 
 (defn chan-seq!!

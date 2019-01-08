@@ -13,7 +13,7 @@
     (are [input expected]
          (let [sql (query->sql schema :testing :v1 input)]
            (testing "SQL is as expected"
-             (= expected sql))
+             (is (= expected sql)))
            (testing (format "generated SQL is valid\n%s" sql)
              (is (jdbc/query test-db-spec sql))))
          [:from :people []]

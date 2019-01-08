@@ -82,7 +82,7 @@
                      :config
                      :namespaces
                      make-pools)
-          {:keys [port] :as jetty-opts} (-> opts :config :webserver)
+          jetty-opts  (-> opts :config :webserver)
           {:keys [nrepl-port]} (-> opts :config :development)
           spec (:spec opts)
           logging-opts {:log-level :info
