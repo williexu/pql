@@ -1,7 +1,7 @@
 # PQL Suite
 
-This project consists of client and server components for a generic database
-query interface inspired by the PuppetDB query API and based on [Puppet Query
+This project contains client and server components for a generic database query
+interface inspired by the PuppetDB query API and based on [Puppet Query
 Language](https://puppet.com/docs/puppetdb/5.1/api/query/v4/pql.html). The
 language in this repo retains none of the Puppet-specific aspects of its
 predecessor, includes support for a few additional operators, and lacks support
@@ -20,13 +20,12 @@ the need in most cases to paginate or make multiple API calls.
 
 ### Installing
 
-The `pql` client tool can be installed in a couple ways. If you have a
-working golang installation, you can get a working install with
+If you have a working golang installation, you can get a working install with
 
     go get github.com/wkalt/pql/pql
     go get github.com/junegunn/fzf
 
-`fzf` is a fuzzy file finder that `pql shell` uses for reverse history search.
+`fzf` is a fuzzy file finder that `pql shell` uses for command history search.
 If you would prefer a deb package, you can grab one from the releases tab that
 will provide both binaries. If you'd rather get binaries, there are binaries
 for both `pql` and `fzf` in the release tarball on the same page.
@@ -36,9 +35,9 @@ and following the `go get` instructions above.
 
 ### Using
 
-To get started with the tool, first connect it to a PQL server by issuing `pql
+To get started with the tool, connect it to a PQL server by issuing `pql
 configure`. This will prompt you to enter a server URL and in cases where your
-server provides multiple, select a namespace. For example,
+server provides multiple namespaces, select a namespace. For example,
 
     $ pql configure
     Enter a server url:
@@ -89,12 +88,12 @@ To see the compiled SQL associated with a query, use `pql plan`:
 
 
 As an alternative to the workflow above, you can run `pql shell`, which will
-kick you into a shell interface and allow you to run queries without quoting,
+drop you into a shell interface and allow you to run queries without quoting,
 retain a searchable query history, and view query results in your pager. See
 the `/help` command in PQL shell for usage instructions.
 
 
-## Language features
+### Language features
 
 PQL supports the following operators:
 
@@ -191,36 +190,36 @@ Additional supported language concepts include:
     [~] $ pql query "country[count(), continent] { group by continent} "
     [ {
       "count" : 46,
-        "continent" : "Europe"
+      "continent" : "Europe"
     }, {
       "count" : 28,
-        "continent" : "Oceania"
+      "continent" : "Oceania"
     }, {
       "count" : 51,
-        "continent" : "Asia"
+      "continent" : "Asia"
     }, {
       "count" : 37,
-        "continent" : "North America"
+      "continent" : "North America"
     }, {
       "count" : 58,
-        "continent" : "Africa"
+      "continent" : "Africa"
     }, {
       "count" : 5,
-        "continent" : "Antarctica"
+      "continent" : "Antarctica"
     }, {
       "count" : 14,
-        "continent" : "South America"
+      "continent" : "South America"
     } ]
     ```
 
 * JSON object descendence ('dot notation')
 
-    `$ pql query "country { attributes.foo.bar = 'baz'}"
+    $ pql query "country { attributes.foo.bar = 'baz'}"
 
 
 ## Python client
 This repo also includes a python client, `pqlpy`. This is an extremely simple
-`urllib` wrapper that simply exposes a PQL server response as a generator. To
+`urllib` wrapper that exposes a PQL server response as a generator. To
 use it,
 
     from pqlpy import Client
@@ -243,15 +242,36 @@ To run locally, you will need [Leiningen][] 2.0.0 or later.
 
 Once lein is installed, you need to generate an API specification from your
 database. Copy the file `example-config.yaml` to `config.yaml`, and edit it to
-point at our database(s), with one namespace per database. Once it is
+point at your database(s), with one namespace per database. Once it is
 configured, generate the API spec with
 
     lein run -c config.yaml --generate-spec spec.edn
 
-After this runs, you can start the server with
+After this runs, can make whatever modifications you want to the spec, and then
+start the server with:
 
     lein run -c config.yaml -s spec.edn
 
+By default, the spec generator will create an API in 1:1 correspondence with
+the tables in your database. For certain databases, this is sufficient, but in
+many cases (such as when your data is normalized), the entities you want to
+expose through your API can differ significantly from the tables in your DB. In
+such cases, you will need to either modify the generated specification or
+write your own.
+
+The API is specified in in [edn](https://github.com/edn-format/edn). The best
+way to get a handle on how to describe APIs is to generate a specification from
+one of your databases and look at it. Aside from the lists of projected
+columns, the part that needs to be modified is the value keyed "base". It
+represents a SQL query in [HoneySQL](https://github.com/jkk/honeysql). To
+modify it appropriately, you will need to read up a bit on HoneySQL.
+
+A major limitation of the current specification format is that it only supports
+entities that HoneySQL can express in edn-compatible datastructures, which
+rules out the possibilty of using vendor-specific functionality in API
+definitions, such as Postgres JSON aggregate functions. In the future it may be
+possible to support entities described by SQL strings, which would fix this
+issue.
 
 ### Running from a jar
 
