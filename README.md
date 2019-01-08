@@ -20,7 +20,7 @@ the need in most cases to paginate or make multiple API calls.
 
 ### Installing
 
-If you have a working golang installation, you can get a working install with
+If you have a working golang installation, you can install pql with
 
     go get github.com/wkalt/pql/pql
     go get github.com/junegunn/fzf
