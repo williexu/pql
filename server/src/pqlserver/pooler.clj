@@ -1,6 +1,5 @@
 (ns pqlserver.pooler
-  (:require [hikari-cp.core :as hk]
-            [clojure.java.jdbc :as jdbc]))
+  (:require [hikari-cp.core :as hk]))
 
 (def default-opts
   {:auto-commit false
