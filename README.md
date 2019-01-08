@@ -8,9 +8,9 @@ predecessor, includes support for a few additional operators, and lacks support
 for a few features of the original. As such, PQL in this project is _the
 People's Query Language_.
 
-The PQL server allows you to generate an API specification from one or more
+The PQL API server allows you to generate an API specification from one or more
 existing Postgres databases and tweak them to suit your needs (similar to
-application-level views). The client tools allows you to consume API data
+application-level views). The client tools allows you to consume API data from the server
 either through a shell (`pql shell`), a command line query tool (`pql query`),
 or a python library (`pqlpy`). All responses are streamed, so users can pull
 large amounts of data through the API without stressing the server, removing
