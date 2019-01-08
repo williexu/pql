@@ -26,7 +26,7 @@ class TestClientConnection(unittest.TestCase):
             nresults += 1
         self.assertEqual(2, nresults)
 
-        url_without_port = re.sub(r":\d{4}", "", SERVER_URL)
+        url_without_port = re.sub(r":\d{4}|\d{5}$", "", SERVER_URL)
 
         with self.assertRaises(Exception):
             c = Client(url_without_port, "test_1")
