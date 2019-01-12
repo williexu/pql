@@ -45,6 +45,7 @@
 (defrecord FieldExpression [field])
 (defrecord FnExpression [function args])
 (defrecord JsonQueryExpression [path])
+(defrecord ArrayExpression [array])
 
 (defn node->plan
   "Codifies a parse tree from parser.clj to a query plan. This parser is
@@ -146,6 +147,10 @@
               {:column (node->plan schema column)
                :subquery (node->plan schema subquery)})
 
+            [[:array array]]
+            (map->ArrayExpression
+              {:array array})
+
             [[:not expr]]
             (map->NotExpression
               {:clause (node->plan schema expr)})))
@@ -234,6 +239,10 @@
   OrderExpression
   (-plan->hsql [{:keys [field direction]}]
     [(second field) (second direction)])
+
+  ArrayExpression
+  (-plan->hsql [{:keys [array]}]
+    (mapv -plan->hsql array))
 
   NotExpression
   (-plan->hsql [{:keys [clause]}]

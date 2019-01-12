@@ -126,4 +126,7 @@
 
          [:group-by [:from :people [:extract [[:field :name]] [:= [:json-query :attributes :foo :bar] "baz"]]] [[:field :name] [:field :age]]]
          ["SELECT people.name FROM people WHERE attributes->'foo'->>'bar' = ? GROUP BY people.name, people.age" "baz"]
+
+         [:from :people [:in [:field :name] [:array ["foo" "bar" "baz"]]]]
+         ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE (people.name in (?, ?, ?))" "foo" "bar" "baz"]
 )))

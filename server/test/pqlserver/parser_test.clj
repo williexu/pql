@@ -142,4 +142,7 @@
        "people [name] {name.foo.bar = 'baz' group by name, age}"
        [:group-by [:from :people [:extract [[:field :name]] [:= [:json-query :name :foo :bar] "baz"]]]
         [[:field :name] [:field :age]]]
+
+       "people {name in ['foo', 'bar', 'baz']}"
+       [:from :people [:in [:field :name] [:array ["foo" "bar" "baz"]]]]
        ))

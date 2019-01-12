@@ -74,7 +74,7 @@
 
 (defn transform-groupedliterallist
   [& args]
-  [:array args])
+  [:array (into [] args)])
 
 (defn transform-sqstring
   [s]
