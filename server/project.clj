@@ -1,4 +1,4 @@
-(defproject pqlserver "0.0.2-SNAPSHOT"
+(defproject pqlserver "0.0.3-SNAPSHOT"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :min-lein-version "2.0.0"
