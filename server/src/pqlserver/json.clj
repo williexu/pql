@@ -33,6 +33,10 @@
     (fn [data ^JsonGenerator jsonGenerator]
       (.writeString jsonGenerator (to-string data))))
   (add-encoder
+    java.sql.Timestamp
+    (fn [data ^JsonGenerator jsonGenerator]
+      (.writeString jsonGenerator (to-string data))))
+  (add-encoder
     RawJsonString
     (fn [data ^JsonGenerator jsonGenerator]
       (.writeRawValue jsonGenerator ^String (:data data)))))
