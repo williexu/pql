@@ -1,7 +1,9 @@
 import os
 import re
-from pqlpy import Client
 import unittest
+import datetime
+
+from pqlpy import Client
 
 SERVER_URL = os.environ["PQL_TEST_SERVER_URL"]
 
@@ -30,6 +32,16 @@ class TestClientConnection(unittest.TestCase):
 
         with self.assertRaises(Exception):
             c = Client(url_without_port, "test_1")
+
+    def test_dates_as_datetimes(self):
+        c = Client(SERVER_URL, "test_1")
+        results = c.query("people{}")
+        self.assertTrue(isinstance(results.next()['birthday'], basestring))
+
+        c = Client(SERVER_URL, "test_1", dates_as_datetimes=True)
+        results = c.query("people{}")
+        self.assertTrue(
+            isinstance(results.next()['birthday'], datetime.datetime))
 
 
 if __name__ == '__main__':
