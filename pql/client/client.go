@@ -190,6 +190,5 @@ func NewClient() *Client {
 	if err != nil {
 		log.Fatal("Error parsing config file:", err)
 	}
-	c.SetSpec()
 	return c
 }
