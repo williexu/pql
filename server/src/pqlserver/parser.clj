@@ -1,3 +1,12 @@
+; Copyright 2011-2016 Puppet Inc
+; Modifications: Copyright 2019 Wyatt Alt
+;
+; This file is derived from PuppetDB code released under Apache 2:
+; https://www.apache.org/licenses/LICENSE-2.0
+;
+; The following notice is required:
+; This product includes software developed at Puppet Inc (http://puppet.com/).
+
 (ns pqlserver.parser
   (:import com.fasterxml.jackson.core.JsonParseException)
   (:require [instaparse.core :as insta]

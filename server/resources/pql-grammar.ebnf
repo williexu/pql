@@ -1,21 +1,13 @@
-(* PQL experimental EBNF specification
+(*
+Copyright 2011-2016 Puppet Inc
+Modifications: Copyright 2019 Wyatt Alt
 
-   This file is the formal specification used by our parsing library that defines
-   the PQL grammar for translation to the AST query language.
+This file is derived from PuppetDB code released under Apache 2:
+https://www.apache.org/licenses/LICENSE-2.0
 
-   This file is used by Mark Engelberg's 'Instaparse' parser in clojure, and
-   follows its own form of EBNF, so is not strictly 'EBNF' but an augmentation. *)
-
-(* Note: the following features are awaiting PDB AST changes first, but
-   generally have support within PDB in one form or another:
-
-   - include_total
-
-   Also, the following items need fundamental changes to PDB first:
-
-   - descending into hashes, like facts & resource parameters conveniently
-   - modifying child data returned (ie. document aware projection)
-   - multi-in support for arrays *)
+The following notice is required:
+This product includes software developed at Puppet Inc (http://puppet.com/).
+*)
 
 (* Top level query, this is the entry point for queries *)
 <query> = [<whitespace>], from, [<whitespace>];
