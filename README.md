@@ -105,6 +105,16 @@ set the environment variable
 This will allow you to browse, but not save, an arbitrary resultset with
 minimal memory overhead.
 
+#### Newline-delimited output
+Newline-delimited output is available for the query and shell subcommands. To
+use it, supply the flag `-n`:
+
+    $ pql query -n "city{limit 5}"
+    {"countrycode":"AFG","district":"Kabol","id":1,"name":"Kabul","population":1780000}
+    {"countrycode":"AFG","district":"Qandahar","id":2,"name":"Qandahar","population":237500}
+    {"countrycode":"AFG","district":"Herat","id":3,"name":"Herat","population":186800}
+    {"countrycode":"AFG","district":"Balkh","id":4,"name":"Mazar-e-Sharif","population":127800}
+    {"countrycode":"NLD","district":"Noord-Holland","id":5,"name":"Amsterdam","population":731200}
 
 ### Language features
 

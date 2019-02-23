@@ -20,6 +20,12 @@ type Client struct {
 	APIVersion string                                       `yaml:"version"`
 	Namespace  string                                       `yaml:"namespace"`
 	Spec       map[string]map[string]map[string]interface{} `yaml:"-"`
+	Opts       Options
+}
+
+// Options holds Client configuration options
+type Options struct {
+	NewlineDelimited bool
 }
 
 func getConfig() string {
@@ -136,12 +142,23 @@ func (c *Client) Plan(pql string) (bool, []byte) {
 // Query the PQL server
 func (c *Client) Query(pql string, out io.Writer) {
 	url := fmt.Sprintf("%s/%s/%s/query", c.URL, c.Namespace, c.APIVersion)
-	resp := makeRequest(url, map[string]string{"query": pql})
+
+	params := map[string]string{
+		"query": pql,
+	}
+
+	if c.Opts.NewlineDelimited {
+		params["newline-delimited"] = "true"
+	}
+
+	resp := makeRequest(url, params)
 	defer resp.Body.Close()
 
 	buf := bufio.NewReader(resp.Body)
 	buf.WriteTo(out)
-	out.Write([]byte("\n"))
+	if !c.Opts.NewlineDelimited {
+		out.Write([]byte("\n"))
+	}
 }
 
 // WriteConfig writes client attributes to the user's config file
@@ -175,7 +192,7 @@ func (c *Client) SetSpec() {
 }
 
 // NewClient constructs a client if the config exists.
-func NewClient() *Client {
+func NewClient(opts Options) *Client {
 	conf := getConfig()
 	if _, err := os.Stat(conf); os.IsNotExist(err) {
 		log.Fatal("Run `pql configure` to generate ~/.pqlrc")
@@ -186,9 +203,12 @@ func NewClient() *Client {
 	}
 
 	c := &Client{}
+
 	err = yaml.Unmarshal(confBytes, &c)
 	if err != nil {
 		log.Fatal("Error parsing config file:", err)
 	}
+
+	c.Opts = opts
 	return c
 }

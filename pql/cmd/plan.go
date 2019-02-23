@@ -19,7 +19,7 @@ var planCmd = &cobra.Command{
 	}`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		c := client.NewClient()
+		c := client.NewClient(client.Options{})
 		result, ok := plan(c, args...)
 		if !ok {
 			fmt.Println(result)

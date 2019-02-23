@@ -8,6 +8,9 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Commandline options
+var newlineDelimited bool
+
 var rootCmd = &cobra.Command{
 	Use:   "pql",
 	Short: "Command line client for PQL server",

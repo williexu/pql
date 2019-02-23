@@ -15,6 +15,7 @@ import (
 	"github.com/docker/docker/pkg/homedir"
 	"github.com/mitchellh/go-wordwrap"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/wkalt/pql/pql/client"
 )
 
@@ -199,7 +200,11 @@ var shellCmd = &cobra.Command{
 		histfile := getHistFile()
 		history := loadHistFile(histfile)
 
-		c := client.NewClient()
+		opts := client.Options{
+			NewlineDelimited: newlineDelimited,
+		}
+
+		c := client.NewClient(opts)
 
 		livePrefix := func() (string, bool) {
 			return fmt.Sprintf("%s=> ", c.Namespace), true
@@ -222,5 +227,9 @@ var shellCmd = &cobra.Command{
 }
 
 func init() {
+	shellCmd.PersistentFlags().BoolVarP(
+		&newlineDelimited, "newline-delimited", "n", false, "return newline-delimited JSON")
+	viper.BindPFlag("newline-delimited", queryCmd.PersistentFlags().Lookup("newline-delimited"))
+
 	rootCmd.AddCommand(shellCmd)
 }

@@ -14,7 +14,7 @@ var describeCmd = &cobra.Command{
 	Long: `Print a description of the configured API. To print available entities,
 	'pql describe'. To print fields for an entity, 'pql describe <entity>'`,
 	Run: func(cmd *cobra.Command, args []string) {
-		c := client.NewClient()
+		c := client.NewClient(client.Options{})
 		result := describe(c, args...)
 		fmt.Println(result)
 	},
@@ -23,9 +23,8 @@ var describeCmd = &cobra.Command{
 func describe(c *client.Client, args ...string) string {
 	if len(args) == 0 {
 		return string(c.Describe())
-	} else {
-		return string(c.DescribeEntity(args[0]))
 	}
+	return string(c.DescribeEntity(args[0]))
 }
 
 func init() {

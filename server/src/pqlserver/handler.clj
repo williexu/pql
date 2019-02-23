@@ -30,7 +30,12 @@
    https://github.com/wkalt/streaming-demo"
   [result-seq cancel-fn writer opts]
   (try
-    (json/generate-stream result-seq writer opts)
+    (if (:nd opts)
+      (do (->> result-seq
+               (map #(.write writer (str (json/generate-string %) "\n")))
+               doall)
+          (.flush writer))
+      (json/generate-stream result-seq writer opts))
     (catch IOException e
       ;; These are client-side cancellations, so we log debug
       (log/debug e "Error streaming response")
@@ -43,7 +48,7 @@
   [pools api-spec]
   (routes
     (GET "/" [] "Hello World")
-    (GET "/:namespace/:version/query" [namespace query version]
+    (GET "/:namespace/:version/query" [namespace query version newline-delimited]
          (try
            (let [version-kwd (keyword version)
                  ns-kwd (keyword namespace)
@@ -65,10 +70,12 @@
                  result-seq (chan-seq!! result-chan)
                  pp (-> json/default-pretty-print-options
                         (assoc :indent-arrays? true)
-                        json/create-pretty-printer)]
+                        json/create-pretty-printer)
+                 opts (cond-> {:pretty pp}
+                        newline-delimited (assoc :nd true)) ]
              (piped-input-stream
                #(let [w (io/make-writer % {:encoding "UTF-8"})]
-                  (wrapped-generate-stream result-seq cancel-fn w {:pretty pp}))))
+                  (wrapped-generate-stream result-seq cancel-fn w opts))))
            (catch Exception e
              (rr/bad-request (.getMessage e)))))
     (GET "/:namespace/:version/plan" [namespace query version]

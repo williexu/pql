@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/wkalt/pql/pql/client"
 )
 
@@ -19,7 +20,11 @@ pql query "people { name ~ 'foo' and age > 30 }"
 pql query "people { name ~ 'foo' and age > 30 limit 100}"`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		c := client.NewClient()
+		opts := client.Options{
+			NewlineDelimited: newlineDelimited,
+		}
+
+		c := client.NewClient(opts)
 		out := bufio.NewWriter(os.Stdout)
 		defer out.Flush()
 		query(c, out, args...)
@@ -36,5 +41,9 @@ func query(c *client.Client, out io.Writer, args ...string) {
 }
 
 func init() {
+	queryCmd.PersistentFlags().BoolVarP(
+		&newlineDelimited, "newline-delimited", "n", false, "return newline-delimited JSON")
+	viper.BindPFlag("newline-delimited", queryCmd.PersistentFlags().Lookup("newline-delimited"))
+
 	rootCmd.AddCommand(queryCmd)
 }
