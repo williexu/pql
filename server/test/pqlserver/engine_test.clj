@@ -72,32 +72,32 @@
          ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name IS NOT NULL LIMIT ? OFFSET ?" 1 10]
 
          [:limit [:offset [:order-by [:from :people [:null? [:field :name] false]] [[:orderparam [:field :name] [:direction :asc]]]] 10] 1]
-         ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name IS NOT NULL ORDER BY name ASC LIMIT ? OFFSET ?" 1 10]
+         ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name IS NOT NULL ORDER BY people.name ASC LIMIT ? OFFSET ?" 1 10]
 
          [:order-by [:offset [:limit [:from :people [:null? [:field :name] false]] 1] 10] [[:orderparam [:field :name] [:direction :asc]]]]
-         ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name IS NOT NULL ORDER BY name ASC LIMIT ? OFFSET ?" 1 10]
+         ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name IS NOT NULL ORDER BY people.name ASC LIMIT ? OFFSET ?" 1 10]
 
          [:order-by [:offset [:limit [:from :people [:null? [:field :name] false]] 1] 10] [[:orderparam [:field :name] [:direction :desc]]]]
-         ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name IS NOT NULL ORDER BY name DESC LIMIT ? OFFSET ?" 1 10]
+         ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name IS NOT NULL ORDER BY people.name DESC LIMIT ? OFFSET ?" 1 10]
 
          [:order-by [:offset [:limit [:from :people [:null? [:field :name] false]] 1] 10]
           [[:orderparam [:field :name] [:direction :desc]] [:orderparam [:field :age] [:direction :asc]]]]
-         ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name IS NOT NULL ORDER BY name DESC, age ASC LIMIT ? OFFSET ?"
+         ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name IS NOT NULL ORDER BY people.name DESC, people.age ASC LIMIT ? OFFSET ?"
           1 10]
 
          [:order-by [:offset [:limit [:from :people [:null? [:field :name] false]] 1] 10]
           [[:orderparam [:field :name] [:direction :desc]] [:orderparam [:field :age] [:direction :asc]]]]
-         ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name IS NOT NULL ORDER BY name DESC, age ASC LIMIT ? OFFSET ?"
+         ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name IS NOT NULL ORDER BY people.name DESC, people.age ASC LIMIT ? OFFSET ?"
           1 10]
 
          [:order-by [:offset [:limit [:from :people [:null? [:field :name] false]] 1] 10]
           [[:orderparam [:field :name] [:direction :asc]] [:orderparam [:field :age] [:direction :desc]]]]
-         ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name IS NOT NULL ORDER BY name ASC, age DESC LIMIT ? OFFSET ?"
+         ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name IS NOT NULL ORDER BY people.name ASC, people.age DESC LIMIT ? OFFSET ?"
           1 10]
 
          [:order-by [:offset [:limit [:from :people [:null? [:field :name] false]] 1] 10]
           [[:orderparam [:field :name] [:direction :asc]] [:orderparam [:field :age] [:direction :desc]]]]
-         ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name IS NOT NULL ORDER BY name ASC, age DESC LIMIT ? OFFSET ?"
+         ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE people.name IS NOT NULL ORDER BY people.name ASC, people.age DESC LIMIT ? OFFSET ?"
           1 10]
 
          [:limit [:from :people []] 10]
@@ -129,4 +129,14 @@
 
          [:from :people [:in [:field :name] [:array ["foo" "bar" "baz"]]]]
          ["SELECT people.age, people.attributes, people.name, people.siblings, people.street_address FROM people WHERE (people.name in (?, ?, ?))" "foo" "bar" "baz"]
+
+         [:order-by [:group-by [:from :people [:extract [[:function :avg [:field :age]]]]] [[:field :name]]] [[:orderparam [:function :avg [:field :age]] [:direction :asc]]]]
+         ["SELECT avg(people.age) FROM people GROUP BY people.name ORDER BY avg(people.age) ASC"]
+
+         [:order-by [:group-by [:from :people [:extract [[:function :avg [:field :age]]]]] [[:field :name]]] [[:orderparam [:function :avg [:field :age]] [:direction :desc]]]]
+         ["SELECT avg(people.age) FROM people GROUP BY people.name ORDER BY avg(people.age) DESC"]
+
+         [:order-by [:group-by [:from :people [:extract [[:function :avg [:field :age]] [:function :sum [:field :age]]]]] [[:field :name]]] [[:orderparam [:function :avg [:field :age]] [:direction :desc]] [:orderparam [:function :sum [:field :age]] [:direction :asc]]]]
+         ["SELECT avg(people.age), sum(people.age) FROM people GROUP BY people.name ORDER BY avg(people.age) DESC, sum(people.age) ASC"]
+
 )))

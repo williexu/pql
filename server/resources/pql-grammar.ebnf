@@ -67,7 +67,7 @@ groupedarglist = <lparens>, [<whitespace>], [arglist], [<whitespace>], <rparens>
 <stringlist>   = string , [ [<whitespace>], <','>, [<whitespace>], stringlist ];
 
 (* Represents a field from an entity *)
-<projectable> = (field | jsonprojection);
+<projectable> = (field | jsonprojection | function);
 field = #'[a-zA-Z0-9_]+\??';
 jsonprojection = (dottedfield, fieldpath);
 <fieldpath> = <'.'>, (quotedfield | standardfield | matchfield) , [fieldpath];
@@ -125,7 +125,7 @@ limit = <'limit'>, <whitespace>, integer;
 offset = <'offset'>, <whitespace>, integer;
 orderby = <'order by'>, <whitespace>, orderparam, [orderparamlist];
 <orderparamlist> = (<','>, [<whitespace>], orderparam)+;
-orderparam = !('asc' | 'desc') field, [<whitespace> direction], [<whitespace>];
+orderparam = !('asc' | 'desc') projectable, [<whitespace> direction], [<whitespace>];
 direction = 'asc' | 'desc';
 
 (* Parens *)

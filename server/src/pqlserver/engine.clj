@@ -59,7 +59,7 @@
 
             [[:orderparam field direction]]
             (map->OrderExpression
-              {:field field
+              {:field (node->plan schema field)
                :direction direction})
 
             [[:field field]]
@@ -221,7 +221,7 @@
   (-plan->hsql [{:keys [function args]}]
     (let [args (if (empty? args)
                  [:*]
-                 (map -plan->hsql args))]
+                 (mapv -plan->hsql args))]
       (apply hc/call function args)))
 
   NullExpression
@@ -238,7 +238,7 @@
 
   OrderExpression
   (-plan->hsql [{:keys [field direction]}]
-    [(second field) (second direction)])
+    [(-plan->hsql field) (second direction)])
 
   ArrayExpression
   (-plan->hsql [{:keys [array]}]

@@ -145,4 +145,13 @@
 
        "people {name in ['foo', 'bar', 'baz']}"
        [:from :people [:in [:field :name] [:array ["foo" "bar" "baz"]]]]
+
+       "people [avg(age)] {group by name order by avg(age)}"
+       [:order-by [:group-by [:from :people [:extract [[:function :avg [:field :age]]]]] [[:field :name]]] [[:orderparam [:function :avg [:field :age]] [:direction :asc]]]]
+
+       "people [avg(age)] {group by name order by avg(age) desc}"
+       [:order-by [:group-by [:from :people [:extract [[:function :avg [:field :age]]]]] [[:field :name]]] [[:orderparam [:function :avg [:field :age]] [:direction :desc]]]]
+
+       "people [avg(age), sum(age)] {group by name order by avg(age) desc, sum(age)}"
+       [:order-by [:group-by [:from :people [:extract [[:function :avg [:field :age]] [:function :sum [:field :age]]]]] [[:field :name]]] [[:orderparam [:function :avg [:field :age]] [:direction :desc]] [:orderparam [:function :sum [:field :age]] [:direction :asc]]]]
        ))
