@@ -3,7 +3,7 @@ import re
 import unittest
 import datetime
 
-from pqlpy import Client
+from pqlpy import Client, PQLParseError
 
 SERVER_URL = os.environ["PQL_TEST_SERVER_URL"]
 
@@ -42,6 +42,12 @@ class TestClientConnection(unittest.TestCase):
         results = c.query("people{}")
         self.assertTrue(
             isinstance(results.next()['birthday'], datetime.datetime))
+
+    def test_raises_parse_errors(self):
+        c = Client(SERVER_URL, "test_1")
+        results = c.query("people{foobar}")
+        with self.assertRaises(PQLParseError):
+            results.next()
 
 
 if __name__ == '__main__':

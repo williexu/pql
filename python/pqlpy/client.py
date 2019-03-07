@@ -4,6 +4,10 @@ import urllib
 from iso8601.iso8601 import parse_date
 
 
+class PQLParseError(Exception):
+    pass
+
+
 def maybe_convert_date(s):
     try:
         return parse_date(s)
@@ -46,6 +50,9 @@ class Client(object):
         lazy processing of the resultset. Uses urllib for file-like request
         objects; might be a better trick with requests."""
         params = urllib.urlencode({"query": pql})
-        request = urllib.urlopen(self.endpoint + "?{}".format(params))
-        for obj in ijson.items(request, 'item'):
-            yield convert_dates(obj) if self.dates_as_datetimes else obj
+        resp = urllib.urlopen(self.endpoint + "?{}".format(params))
+        if resp.getcode() >= 400:
+            raise PQLParseError("\n{}".format(resp.read()))
+        else:
+            for obj in ijson.items(resp, 'item'):
+                yield convert_dates(obj) if self.dates_as_datetimes else obj
