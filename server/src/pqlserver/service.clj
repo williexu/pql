@@ -1,22 +1,23 @@
 (ns pqlserver.service
   (:require [clojure.tools.cli :as cli]
             [clojure.tools.logging :as log]
-            [yaml.core :as yaml]
             [clojure.tools.nrepl.server :as nrepl]
+            [metrics.core :refer [default-registry]]
+            [metrics.jvm.core :refer [instrument-jvm]]
+            [metrics.reporters.jmx :as jmx]
+            [metrics.ring.expose :refer [expose-metrics-as-json]]
+            [metrics.ring.instrument :refer [instrument-by uri-prefix]]
+            [overtone.at-at :as at-at]
+            [pqlserver.handler :as handler]
             [pqlserver.json :as pql-json]
             [pqlserver.pooler :as pooler]
             [pqlserver.schema :as schema]
+            [pqlserver.utils :refer [mapvals]]
             [puppetlabs.trapperkeeper.logging :refer [configure-logging!]]
             [ring.adapter.jetty :refer [run-jetty]]
-            [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
             [ring.logger :as ring-logger]
-            [metrics.core :refer [default-registry]]
-            [metrics.ring.expose :refer [expose-metrics-as-json]]
-            [metrics.ring.instrument :refer [instrument-by uri-prefix]]
-            [metrics.jvm.core :refer [instrument-jvm]]
-            [metrics.reporters.jmx :as jmx]
-            [pqlserver.utils :refer [mapvals]]
-            [pqlserver.handler :as handler])
+            [ring.middleware.defaults :refer [wrap-defaults api-defaults]]
+            [yaml.core :as yaml])
   (:gen-class))
 
 (def cli-options
@@ -32,9 +33,6 @@
   [opts]
   (when-not (:config opts)
     (println "Specify a config file with -c or --config")
-    (System/exit 1))
-  (when-not (or (:generate-spec opts) (:spec opts))
-    (println "Indicate a specification file with --spec, or generate one with --generate-spec")
     (System/exit 1))
   (when (and (:generate-spec opts) (:spec opts))
     (println "--generate-spec and --spec are mutually exclusive")
@@ -61,27 +59,41 @@
       (run-jetty jetty-opts)))
 
 (defn make-pools [namespaces]
-  (reduce (fn [m v]
-            (assoc m (keyword (:name v))
-                   (pooler/datasource (dissoc v :name)))) {} namespaces))
+  (-> namespaces
+      (mapvals pooler/datasource)))
+
+(defn generate-api-specs [namespaces]
+  (-> namespaces
+      (mapvals db-config->db-spec)
+      (mapvals schema/get-schema)))
+
+(defn schedule-api-spec-updates!
+  "Updates the API spec every 30 minutes to match the deployed database schema.
+   First update occurs immediately."
+  [job-pool api-spec namespaces]
+  (let [minutes 30
+        interval (* minutes 60 1000)
+        update-spec! #(do (log/info "Updating API specification")
+                          (reset! api-spec (generate-api-specs namespaces))
+                          (log/info "Updated API specification"))]
+    (log/infof "Scheduling API specification updates every %s minutes" minutes)
+    (at-at/every interval update-spec! job-pool)))
 
 (defn -main [& args]
   (let [opts (-> (cli/parse-opts args cli-options)
                  :options
                  validate-opts)
-        namespaces (-> opts :config :namespaces)]
+        namespaces (-> opts :config :namespaces)
+        job-pool (at-at/mk-pool)
+        api-spec (atom nil)]
     (when-let [spec-file (:generate-spec opts)]
       (spit spec-file
-            (-> #(assoc %1 (keyword (:name %2)) (db-config->db-spec %2))
-                (reduce {} namespaces)
-                (mapvals schema/get-schema)
+            (-> (generate-api-specs namespaces)
                 clojure.pprint/pprint
                 with-out-str))
       (System/exit 0))
-    (let [pools (->> opts
-                     :config
-                     :namespaces
-                     make-pools)
+    (let [namespaces (->> opts :config :namespaces)
+          pools (make-pools namespaces)
           jetty-opts  (-> opts :config :webserver)
           {:keys [nrepl-port]} (-> opts :config :development)
           spec (:spec opts)
@@ -92,10 +104,15 @@
                 (clojure.java.io/resource "logback.xml")}} (-> opts
                                                                :config
                                                                :service)]
+
+      (if spec
+        (reset! api-spec spec)
+        (schedule-api-spec-updates! job-pool api-spec namespaces))
+
       (when nrepl-port
         (nrepl/start-server :port nrepl-port))
       (configure-logging! logging-config)
       (instrument-jvm default-registry)
       (pql-json/add-common-json-encoders!)
       (jmx/start (jmx/reporter default-registry {}))
-      (start-server pools spec logging-opts jetty-opts))))
+      (start-server pools api-spec logging-opts jetty-opts))))

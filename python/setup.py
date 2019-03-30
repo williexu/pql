@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="pqlpy",
-    version="0.0.4",
+    version="0.0.6",
     author="Wyatt Alt",
     author_email="wyatt.alt@gmail.com",
     description="pqlserver client library",

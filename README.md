@@ -263,31 +263,27 @@ To run locally, you will need [Leiningen][] 2.0.0 or later.
 
 [leiningen]: https://github.com/technomancy/leiningen
 
-Once lein is installed, you need to generate an API specification from your
-database. Copy the file `example-config.yaml` to `config.yaml`, and edit it to
-point at your database(s), with one namespace per database. Once it is
-configured, generate the API spec with
+Once lein is installed, get the server running by copying `example-config.yaml`
+to `config.yaml`, editing it to point at your database(s), and launching the
+service with
+
+    lein run -c config.yaml
+
+This will deploy pqlserver with an API that matches the schema of your
+database. If you require a more sophisticated mapping, generate an API spec
+from the database with
 
     lein run -c config.yaml --generate-spec spec.edn
 
-After this runs, can make whatever modifications you want to the spec, and then
-start the server with:
+Edit the resulting file to meet your needs, and run the service with
 
     lein run -c config.yaml -s spec.edn
 
-By default, the spec generator will create an API in 1:1 correspondence with
-the tables in your database. For certain databases, this is sufficient, but in
-many cases (such as when your data is normalized), the entities you want to
-expose through your API can differ significantly from the tables in your DB. In
-such cases, you will need to either modify the generated specification or
-write your own.
-
-The API is specified in in [edn](https://github.com/edn-format/edn). The best
-way to get a handle on how to describe APIs is to generate a specification from
-one of your databases and look at it. Aside from the lists of projected
-columns, the part that needs to be modified is the value keyed "base". It
-represents a SQL query in [HoneySQL](https://github.com/jkk/honeysql). To
-modify it appropriately, you will need to read up a bit on HoneySQL.
+The API is specified in in [edn](https://github.com/edn-format/edn).  Aside
+from the lists of projected columns, the part that needs to be modified is the
+value keyed "base". It represents a SQL query in
+[HoneySQL](https://github.com/jkk/honeysql). To modify it appropriately, you
+will need to read up a bit on HoneySQL.
 
 A major limitation of the current specification format is that it only supports
 entities that HoneySQL can express in edn-compatible datastructures, which

@@ -12,18 +12,16 @@
 (def ^:dynamic *server-url* nil)
 
 (def test-dbs
-  [{:name "test_1"
-    :server-name "localhost"
-    :database-name "pql_test_1"
-    :port-number 5432
-    :username "pql_test"
-    :password "pql_test"}
-   {:name "test_2"
-    :server-name "localhost"
-    :database-name "pql_test_2"
-    :port-number 5432
-    :username "pql_test"
-    :password "pql_test"}])
+  {:test_1 {:server-name "localhost"
+            :database-name "pql_test_1"
+            :port-number 5432
+            :username "pql_test"
+            :password "pql_test"}
+   :test_2 {:server-name "localhost"
+            :database-name "pql_test_2"
+            :port-number 5432
+            :username "pql_test"
+            :password "pql_test"}})
 
 (defn uuid []
   (java.util.UUID/randomUUID))
@@ -42,8 +40,8 @@
 
 (defn setup-test-dbs
   [test-dbs]
-  (let [db1 (svc/db-config->db-spec (first test-dbs))
-        db2 (svc/db-config->db-spec (second test-dbs))
+  (let [db1 (svc/db-config->db-spec (:test_1 test-dbs))
+        db2 (svc/db-config->db-spec (:test_2 test-dbs))
         people [{:name "abraham lincoln"
                  :age 27
                  :age_precise 2.71828
@@ -72,8 +70,8 @@
 
 (defn cleanup-test-dbs
   [test-dbs]
-  (let [db1 (svc/db-config->db-spec (first test-dbs))
-        db2 (svc/db-config->db-spec (second test-dbs))]
+  (let [db1 (svc/db-config->db-spec (:test_1 test-dbs))
+        db2 (svc/db-config->db-spec (:test_2 test-dbs))]
     (jdbc/db-do-commands db1
                          ["truncate table people cascade"])
     (jdbc/db-do-commands db2
@@ -98,9 +96,7 @@
   (pooler/datasource test-db))
 
 (defn call-with-test-instance [f]
-  (let [spec (-> #(assoc %1 (keyword (:name %2)) (svc/db-config->db-spec %2))
-                 (reduce {} test-dbs)
-                 (mapvals schema/get-schema))
+  (let [spec (atom (svc/generate-api-specs test-dbs))
         pools (svc/make-pools test-dbs)
         jetty-opts {:port (open-port) :join? false}
         server (svc/start-server pools spec nil jetty-opts)]

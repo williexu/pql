@@ -54,7 +54,7 @@
                  ns-kwd (keyword namespace)
                  sql (->> query
                           pql->ast
-                          (query->sql api-spec ns-kwd version-kwd))
+                          (query->sql @api-spec ns-kwd version-kwd))
                  result-chan (async/chan)
                  kill? (async/chan)
                  cancel-fn #(async/>!! kill? ::cancel)
@@ -84,20 +84,20 @@
                  ns-kwd (keyword namespace)
                  sql (->> query
                           pql->ast
-                          (query->sql api-spec ns-kwd version-kwd))]
+                          (query->sql @api-spec ns-kwd version-kwd))]
              (-> {:query (first sql) :parameters (rest sql)}
                  (json/generate-string {:pretty true})
                  json-response))
            (catch Exception e
              (rr/bad-request (.getMessage e)))))
     (GET "/describe-all" []
-         (-> api-spec
+         (-> @api-spec
              (json/generate-string {:pretty true})
              json-response))
     (GET "/:namespace/:version/describe" [namespace version]
          (let [version-kwd (keyword version)
                ns-kwd (keyword namespace)]
-           (-> api-spec
+           (-> @api-spec
                ns-kwd
                version-kwd
                keys
@@ -108,7 +108,7 @@
          (let [version-kwd (keyword version)
                entity-kwd (keyword entity)
                ns-kwd (keyword namespace)]
-           (-> api-spec
+           (-> @api-spec
                ns-kwd
                version-kwd
                entity-kwd
