@@ -2,7 +2,7 @@ test:
 	cd server && lein test && cd -
 
 .PHONY: build
-build: clean server client pqlpy
+build: clean server client pqlpy docker
 
 .PHONY: pqlpy
 pqlpy: builddir
@@ -10,8 +10,13 @@ pqlpy: builddir
 
 .PHONY: server
 server:
+	rm -rf server/target
 	cd server && lein uberjar && cd -
-	cp server/target/pqlserver-${rel}-SNAPSHOT-standalone.jar build/
+	cp server/target/pqlserver-*-SNAPSHOT-standalone.jar build/
+
+.PHONY: docker
+docker: server
+	docker build ./server -t pqlserver
 
 .PHONY: client
 client: builddir
