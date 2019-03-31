@@ -12,7 +12,7 @@
             [pqlserver.json :as pql-json]
             [pqlserver.pooler :as pooler]
             [pqlserver.schema :as schema]
-            [pqlserver.utils :refer [mapvals]]
+            [pqlserver.utils :refer [mapvals b64-decode]]
             [puppetlabs.trapperkeeper.logging :refer [configure-logging!]]
             [ring.adapter.jetty :refer [run-jetty]]
             [ring.logger :as ring-logger]
@@ -31,13 +31,17 @@
 
 (defn validate-opts
   [opts]
-  (when-not (:config opts)
-    (println "Specify a config file with -c or --config")
+  (when-not (or (:config opts) (System/getenv "PQLSERVER_CONFIG"))
+    (println "Specify a config file with -c, --config, or the PQLSERVER_CONFIG environment variable.")
     (System/exit 1))
   (when (and (:generate-spec opts) (:spec opts))
     (println "--generate-spec and --spec are mutually exclusive")
     (System/exit 1))
-
+  (when-let [b64-str (System/getenv "PQLSERVER_CONFIG")]
+    (try (b64-decode b64-str)
+         (catch Exception e
+           (println "PQLSERVER_CONFIG must be valid base64.")
+           (System/exit 1))))
   ;; config is valid
   opts)
 
@@ -83,7 +87,10 @@
   (let [opts (-> (cli/parse-opts args cli-options)
                  :options
                  validate-opts)
-        namespaces (-> opts :config :namespaces)
+        {:keys [namespaces webserver development]} (or (:config opts)
+                                                       (-> (System/getenv "PQLSERVER_CONFIG")
+                                                           b64-decode
+                                                           yaml/parse-string))
         job-pool (at-at/mk-pool)
         api-spec (atom nil)]
     (when-let [spec-file (:generate-spec opts)]
@@ -92,10 +99,8 @@
                 clojure.pprint/pprint
                 with-out-str))
       (System/exit 0))
-    (let [namespaces (->> opts :config :namespaces)
-          pools (make-pools namespaces)
-          jetty-opts  (-> opts :config :webserver)
-          {:keys [nrepl-port]} (-> opts :config :development)
+    (let [pools (make-pools namespaces)
+          nrepl-port (:nrepl-port development)
           spec (:spec opts)
           logging-opts {:log-level :info
                         :request-keys [:request-method :uri :remote-addr]}
@@ -115,4 +120,4 @@
       (instrument-jvm default-registry)
       (pql-json/add-common-json-encoders!)
       (jmx/start (jmx/reporter default-registry {}))
-      (start-server pools api-spec logging-opts jetty-opts))))
+      (start-server pools api-spec logging-opts webserver))))
