@@ -21,6 +21,7 @@ var describeCmd = &cobra.Command{
 }
 
 func describe(c *client.Client, args ...string) string {
+	c.SetSpec()
 	if len(args) == 0 {
 		return string(c.Describe())
 	}
