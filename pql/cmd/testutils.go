@@ -13,6 +13,5 @@ func makeClient() *client.Client {
 		APIVersion: "v1",
 		Namespace:  "test_1",
 	}
-	c.SetSpec()
 	return &c
 }
