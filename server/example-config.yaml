@@ -1,6 +1,6 @@
 ---
 namespaces:
-  - name: test
+  test:
     server-name: localhost
     database-name: pqlserver
     port-number: 5432

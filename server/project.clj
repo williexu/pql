@@ -21,6 +21,7 @@
                  [org.clojure/tools.cli "0.4.1"]
                  [org.clojure/tools.logging "0.4.1"]
                  [org.clojure/tools.nrepl "0.2.13"]
+                 [org.flatland/ordered "1.5.7"]
                  [org.postgresql/postgresql "42.2.2"]
                  [overtone/at-at "1.2.0"]
                  [puppetlabs/trapperkeeper "1.5.6"]
